@@ -1,58 +1,144 @@
-# Lou3ab Tounes · لعب تونس
+# Lou3ab Tunisia · لعب تونس
 
-Trivia games about Tunisia, in French, English and Arabic.
+**Daily trivia games to discover Tunisia: its 24 governorates and 279 delegations, its personalities, history, food, festivals and football.**
+Playable in French, English and Arabic, on phone or computer, free and without an account.
 
-**Live: https://lou3ab-tounes.vercel.app** (Vercel redeploys on every push to `main`).
+### ▶ Play: **https://lou3ab-tounes.vercel.app**
 
-| Game | Type | What you do |
+![Lou3ab Tunisia](assets/og.png)
+
+---
+
+## Why this project
+
+Most Tunisians can name their own governorate and a few big cities, but far fewer could place Siliana on a map,
+say who was born in Nebeur, or tell when the Hafsid sultan al-Mustansir faced the crusade of Louis IX.
+And for people outside Tunisia, the country often stops at Carthage, Djerba and the beaches.
+
+**Lou3ab Tunisia wants Tunisians and foreigners alike to learn more about the country, one short game a day.**
+Every puzzle is built on verified data: official census figures (INS 2024), precise open-source maps, and facts
+checked against reliable sources. Lose or win, every round ends with something new learned.
+
+## The games
+
+| Game | Mode | How it works |
 |---|---|---|
-| Wilayadle | daily | Loldle-style: guess the governorate; each column (region, coast, borders, population, area, delegations, distance) turns green, orange or red with ↑↓ arrows. Bonus: tap its neighbours |
-| Persondle | daily | Loldle-style: guess the Tunisian personality (field, gender, birthplace, region, birth year, living). Roster in `assets/people.js`, plus one new person per day |
-| Chkoun? | daily | Mystery person or place told in clues, 3 guesses on the map to find where they come from |
-| Ghouss | daily | 7 prompts; rarer (less populated) answers dive deeper |
-| Tarikh | daily + endless | Place historical events (814 BC → 2015) on a timeline |
-| Mnin? | endless | Singers, clubs, dishes, monuments: tap their governorate |
-| Blitz | endless | 60 s to find governorates, or 90 s for delegations |
-| Akthar walla Aqal | endless | Higher or lower: population, area, growth (INS 2024) |
-| Party | local | Pass-and-play with 3 lives each, or a 10-question challenge link (`#defi-CODE`) |
+| 🗺️ **Wilayadle** | Daily | Guess the governorate of the day. Each guess is compared column by column, Loldle-style: region, coast, borders, population, area, number of delegations, distance and direction (green = right, orange = close, red = wrong, ↑↓ = higher/lower). Bonus round: tap its neighbours. |
+| 👤 **Persondle** | Daily | Guess the Tunisian personality of the day: field, gender, governorate and region of birth, birth year, living or not. |
+| 🕵️ **Chkoun?** | Daily | A mystery person or place. One clue to start, one more after each wrong guess on the map (5 clues). Where does it come from? |
+| 🤿 **Ghouss** | Daily | Seven prompts about Tunisian food, festivals, holidays, footballers and clubs. Answers few players give take you deeper (Krillion-style). Typo-tolerant with "Did you mean…?". |
+| 📜 **Tarikh** | Daily + endless | Place historical events on a timeline, from the founding of Carthage to the Nobel Peace Prize of 2015, with many lesser-known episodes in between. |
+| 📍 **Mnin?** | Endless | Singers, clubs, dishes, monuments: tap the governorate each one comes from. |
+| ⚡ **Blitz** | Endless | Find all 24 governorates in 60 s, or 15 delegations in 90 s. |
+| 📊 **Akthar walla Aqal** | Endless | Higher or lower: population, area, growth (INS 2024), plus a new theme every day. |
+| 🎉 **Party** | Local / link | Pass the phone around (3 lives each), or send a 10-question challenge link to friends. |
 
-Daily puzzles start on 28 Oct 2026 (#1). Old puzzles: `#wilayadle-3`, `#chkoun-3`, etc.
+Daily puzzles change at midnight (player's local time). Players see a countdown to the next one, and shared statistics
+("2,481 people already found it", "you did better than 63% of players").
 
-## Deploy on Vercel (free)
+## How it works
 
-It is a static site: no build step.
+```
+                ┌─────────────────────────────┐
+  every night   │ Scheduled task (Claude)     │  researches & verifies tomorrow's content,
+  20:22 Tunis → │ writes assets/daily.js      │  runs tools/content.js validate, pushes
+                └──────────────┬──────────────┘
+                               │ git push
+                ┌──────────────▼──────────────┐
+                │ GitHub: this repository     │
+                └──────────────┬──────────────┘
+                               │ auto-deploy
+                ┌──────────────▼──────────────┐      ┌─────────────────────────┐
+                │ Vercel: static site + /api  │ ───► │ Upstash Redis           │
+                │ lou3ab-tounes.vercel.app    │      │ shared stats & answers  │
+                └─────────────────────────────┘      └─────────────────────────┘
+```
 
-1. Install Node.js, then in this folder run:
-   ```
-   npx vercel --prod
-   ```
-   Log in when asked, accept the defaults ("Other" framework, no build command, output = `.`).
-2. Or: push this folder to a GitHub repo, then on vercel.com → Add New Project → import the repo → Deploy.
+- **No build step.** The site is plain HTML, CSS and JavaScript; it opens straight from `index.html`.
+- **Daily content.** `assets/daily.js` holds content keyed by date (`YYYY-MM-DD`): the governorate and person of the day, a new Chkoun mystery, Ghouss prompts and answers, history events, Mnin cards and an Akthar theme. A nightly scheduled task adds the next day and checks it with `node tools/content.js validate` before pushing.
+- **Player progress** stays in each player's browser (`localStorage`). There are no accounts.
+- **Shared statistics** go through one serverless function, `api/stats.js`, backed by Upstash Redis. Each player is counted once per puzzle through an anonymous random ID.
+- **Accuracy policy.** Every birthplace, date and figure is checked against at least one reliable source (Wikipedia in several languages, INS, official sites). When sources disagree, the item is left out.
 
-Netlify Drop (app.netlify.com/drop) also works: drag this folder onto the page.
+## Project structure
 
-Open `index.html` directly in a browser to play locally.
+```
+lou3ab-tounes/
+├── index.html              Page shell, meta tags, script includes
+├── vercel.json             Caching headers
+├── api/
+│   └── stats.js            Shared statistics (Vercel function → Upstash Redis)
+├── assets/
+│   ├── app.js              The whole game engine (router, 9 games, maps, i18n, stats)
+│   ├── style.css           Styles, light & dark themes
+│   ├── data.js             Map data: 24 governorates, 279 delegations, borders, coast (generated)
+│   ├── facts.js            Mnin? origin cards and Chkoun? mysteries
+│   ├── history.js          Tarikh timeline events (en/fr/ar)
+│   ├── people.js           Persondle roster
+│   ├── ghouss.js           Ghouss answer bank (food, events, players, clubs)
+│   ├── daily.js            Content added day by day
+│   ├── people/             Optional photos for Persondle (see its README)
+│   ├── og.png, icon.svg    Share image and favicon
+├── tools/
+│   └── content.js          Validate daily content, list ids, find unused items
+├── prep_data.py            Regenerates assets/data.js from Map Tunisia
+├── LICENSE                 MIT (code)
+└── LICENSE-CONTENT.md      Licences for content and map data
+```
 
-## Daily content
+## Run it locally
 
-`assets/daily.js` holds extra content keyed by date (`YYYY-MM-DD`). For each date it can set:
+```bash
+git clone https://github.com/AhmedChatti/lou3ab-tounes.git
+cd lou3ab-tounes
+python3 -m http.server 8000      # or any static server
+# open http://localhost:8000
+```
 
-- `wilayadle`: the day's governorate (`g`) and a fun fact shown after the game
-- `chkoun`: a new mystery (4 clues in en/fr/ar, birthplace text)
-- `ghouss`: up to 7 custom prompts with their list of valid ids
-- `tarikh`: new events (they are dealt first in that day's timeline, then join the deck)
-- `mnin`: new origin cards (shown under "New" for 7 days, then join the pool)
-- `akthar`: a themed higher/lower deck (at least 6 items with a numeric `value` and a `source`)
+Everything works locally except shared statistics, which need the API (`vercel dev` with the Upstash variables).
 
-A scheduled task fills the next day every night and runs `node tools/content.js validate` before pushing.
-Helper commands: `node tools/content.js govs`, `dels TN-41`, `used`, `next`.
+## Deploy your own copy
 
-## Editing content
+1. Import the repository on [Vercel](https://vercel.com/new) (framework: *Other*, no build command).
+2. Optional, for shared stats: add **Upstash for Redis** from the Vercel Marketplace and connect it to the project. The API reads `KV_REST_API_URL` / `KV_REST_API_TOKEN` (prefixed names work too).
 
-- `assets/facts.js`: origin cards (Mnin?, Party) and daily mysteries (Chkoun?)
-- `assets/history.js`: timeline events (Tarikh), with Arabic text
-- `assets/data.js`: generated from Map Tunisia (governorates, delegations, borders). Don't edit by hand.
+## Content toolbox
+
+```bash
+node tools/content.js validate        # check assets/daily.js
+node tools/content.js next            # first date without content
+node tools/content.js used            # everything already used (avoid repeats)
+node tools/content.js govs            # governorate ids, population, area, neighbours
+node tools/content.js dels TN-41      # delegations of a governorate
+node tools/content.js ghouss food     # Ghouss answer bank by category
+```
+
+To regenerate the map data from a fresh copy of Map Tunisia: clone it next to this repo and run `python3 prep_data.py`.
+
+## Contributing
+
+Found a wrong fact, a missing spelling, a dish or a footballer we forgot?
+
+- **Open an issue** with the correction and a source link, or
+- **Send a pull request** editing the relevant file in `assets/` (run `node tools/content.js validate` first).
+
+Please keep the accuracy policy: one reliable source per fact, no song lyrics, no photos you do not have the rights to.
 
 ## Credits
 
-Map data © OpenStreetMap contributors (ODbL) · [Map Tunisia](https://github.com/Alaa-Taieb/map-tunisia) by Alaa Taieb · Census figures INS 2024.
+- **Map data:** [Map Tunisia](https://github.com/Alaa-Taieb/map-tunisia) by [Alaa Taieb](https://www.linkedin.com/in/alaa-taieb/), built from © OpenStreetMap contributors (ODbL). Thank you Alaa for making such precise maps open to everyone.
+- **Census figures:** Institut National de la Statistique (INS), RGPH 2014 and 2024.
+- **Inspiration:** Worldle, Loldle, Originle and Krillion.
+
+## License
+
+- Code: [MIT](LICENSE)
+- Game content: CC BY 4.0
+- Map data: ODbL 1.0
+
+Details in [LICENSE-CONTENT.md](LICENSE-CONTENT.md).
+
+## Author
+
+**Ahmed Chatti**
+[LinkedIn](https://www.linkedin.com/in/ahmedchatti/) · If you enjoy the games, connect with me and ⭐ the repository!

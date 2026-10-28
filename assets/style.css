@@ -363,3 +363,14 @@ table.dle th[scope=col]{font:600 12px var(--f-body);color:var(--muted);text-tran
 .hero{border:1px solid rgba(255,255,255,.08)}
 .hero .pill{white-space:nowrap}
 @media (max-width:420px){.hero .pill{font-size:11px;letter-spacing:.08em;padding:8px 11px}}
+/* "made by" credit card at the end of games */
+.madeby{margin-top:16px;padding:16px;border-radius:var(--r);background:#0f1d33;color:#eef3f9;text-align:center;border:1px solid rgba(255,255,255,.08)}
+.madeby a{color:#f5b400;font-weight:700;text-decoration:none}
+.madeby a:hover{text-decoration:underline}
+.mb-t{margin:0;font:700 17px var(--f-display)}
+.mb-s{margin:6px 0 12px;color:#b9c7d8;font-size:14px}
+.mb-b{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.mb-b a{background:#f5b400;color:#1c1300;padding:8px 14px;border-radius:10px;font-size:14px}
+.mb-b a:first-child{background:#2867b2;color:#fff}
+.mb-b a:hover{text-decoration:none;filter:brightness(1.08)}
+.foot p+p{margin-top:2px}

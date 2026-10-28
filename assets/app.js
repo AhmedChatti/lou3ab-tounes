@@ -178,7 +178,16 @@ function shell(id, title, ar, sub, body) {
 function langSwitch() { return `<div class="seg" role="group" aria-label="Language">${['fr', 'en', 'ar'].map(l => `<button data-lang="${l}" class="${l === LANG ? 'on' : ''}">${l === 'ar' ? 'ع' : l.toUpperCase()}</button>`).join('')}</div>`; }
 function bindLang() { $$('[data-lang]').forEach(b => b.onclick = () => { LANG = b.dataset.lang; LS.set('lang', LANG); applyLang(); route(); }); }
 function applyLang() { document.documentElement.lang = LANG; document.documentElement.dir = LANG === 'ar' ? 'rtl' : 'ltr'; }
-function footer() { return `<footer class="foot"><p><a href="https://github.com/Alaa-Taieb/map-tunisia" target="_blank" rel="noopener">Map Tunisia</a> ${L({ en: 'by', fr: 'par', ar: 'لـ' })} <a href="https://github.com/Alaa-Taieb/map-tunisia" target="_blank" rel="noopener">Alaa Taieb</a></p></footer>`; }
+const LINKS = { repo: 'https://github.com/AhmedChatti/lou3ab-tounes', me: 'https://www.linkedin.com/in/ahmedchatti/', map: 'https://github.com/Alaa-Taieb/map-tunisia', alaa: 'https://www.linkedin.com/in/alaa-taieb/' };
+const ext = (href, txt) => `<a href="${href}" target="_blank" rel="noopener">${txt}</a>`;
+// credit card shown at the end of every game (win or lose)
+function madeBy() {
+  return `<div class="madeby"><p class="mb-t">${ext(LINKS.repo, 'Lou3ab Tunisia')} ${L({ en: 'made by', fr: 'créé par', ar: 'من إنجاز' })} ${ext(LINKS.me, 'Ahmed Chatti')}</p>
+    <p class="mb-s">${L({ en: 'If you like it, connect with me and interact with the GitHub repository.', fr: 'Si ça te plaît, connecte-toi avec moi et interagis avec le dépôt GitHub.', ar: 'إذا أعجبتك، تواصل معي وتفاعل مع مستودع GitHub.' })}</p>
+    <div class="mb-b">${ext(LINKS.me, 'LinkedIn')}${ext(LINKS.repo, '★ GitHub')}</div></div>`;
+}
+const addMadeBy = root => { if (root && !root.querySelector('.madeby')) root.insertAdjacentHTML('beforeend', madeBy()); };
+function footer() { return `<footer class="foot"><p>${ext(LINKS.map, 'Map Tunisia')} ${L({ en: 'by', fr: 'par', ar: 'لـ' })} ${ext(LINKS.alaa, 'Alaa Taieb')}</p><p>${ext(LINKS.repo, 'Lou3ab Tunisia')} ${L({ en: 'made by', fr: 'créé par', ar: 'من إنجاز' })} ${ext(LINKS.me, 'Ahmed Chatti')}</p></footer>`; }
 function dayPicker(game, day, max) { return `<div class="daypick"><a class="btn ghost sm ${day <= 1 ? 'dis' : ''}" href="#${game}-${day - 1}">‹</a><span>${t('puzzle')} #${day}</span><a class="btn ghost sm ${day >= max ? 'dis' : ''}" href="#${game}-${day + 1}">›</a></div>`; }
 function hearts(n, max) { return `<span class="hearts" aria-label="${n} lives">${'<i class="h on"></i>'.repeat(Math.max(0, n))}${'<i class="h"></i>'.repeat(Math.max(0, max - n))}</span>`; }
 
@@ -336,7 +345,7 @@ function dle(cfg) {
     const sh = shareBtn(shareText);
     after.innerHTML = `<div class="result win"><p class="rt">${t('won')} · ${st.guesses.length} ${L({ en: 'guesses', fr: 'essais', ar: 'محاولات' })}</p><h2>${esc(cfg.label(target))} <span lang="ar">${esc(cfg.alt(target))}</span></h2>${cfg.reveal(target, day)}<div class="gstats" hidden></div>${cdHTML(day)}</div>${cfg.bonus ? '<div class="bonusbox"></div>' : ''}<div class="actions">${sh.html}</div>`;
     statBlock($('.gstats', after), cfg.id, day, st.guesses.length, 'low', { bars: 8 }); countdown($('.cd', after)); todayLink(after, cfg.id);
-    sh.bind(after); if (cfg.bonus) cfg.bonus($('.bonusbox', after), target, st, save, () => $$('[data-share]', after).forEach(b => b.onclick = () => copy(shareText(), b)));
+    sh.bind(after); addMadeBy(after); if (cfg.bonus) cfg.bonus($('.bonusbox', after), target, st, save, () => $$('[data-share]', after).forEach(b => b.onclick = () => copy(shareText(), b)));
     after.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   if (!st.done) acInput(inbox, () => cfg.list().filter(x => !st.guesses.includes(x.id)), v => {
@@ -452,7 +461,7 @@ function chkoun(day) {
   function end() {
     const sh = shareBtn(() => `Chkoun? #${day} ${st.won ? st.guesses.length : 'X'}/${MAX}\n${st.guesses.map(id => id === M.g ? '🟩' : '🟥').join('')}${'⬜'.repeat(MAX - st.guesses.length)}\n${link('chkoun-' + day)}`);
     after.innerHTML = `<div class="result ${st.won ? 'win' : 'lose'}"><p class="rt">${st.won ? t('won') : t('lost')}</p><h2>${esc(M.name)}</h2><p>${esc(M['born_' + LANG] || M.born_fr || M.born_en)} · ${esc(nm(G[M.g]))}</p><div class="gstats" hidden></div>${cdHTML(day)}</div><div class="actions">${sh.html}</div>`;
-    sh.bind(after); statBlock($('.gstats', after), 'chkoun', day, st.won ? st.guesses.length : 6, 'low', { bars: 6, failAt: 6, failed: !st.won }); countdown($('.cd', after)); todayLink(after, 'chkoun');
+    sh.bind(after); addMadeBy(after); statBlock($('.gstats', after), 'chkoun', day, st.won ? st.guesses.length : 6, 'low', { bars: 6, failAt: 6, failed: !st.won }); countdown($('.cd', after)); todayLink(after, 'chkoun');
   }
   draw();
 }
@@ -580,7 +589,7 @@ function ghouss(day) {
     after.innerHTML = `<div class="result win"><p class="rt">${t('depth')}</p><h2>${tot} m</h2><div class="gstats" hidden></div>${cdHTML(day)}</div>
       <details class="deep"><summary>${L({ en: 'Rare answers you could have given', fr: 'Des réponses rares possibles', ar: 'إجابات نادرة كان يمكنك قولها' })}</summary><ul>${P.map(p => { const rare = p.valid.map(id => GHB[id]).filter(x => x.t === 3).slice(0, 3); return `<li><span>${esc(p.txt)}</span><b>${esc((rare.length ? rare : p.valid.slice(-2).map(id => GHB[id])).map(ghName).join(', '))}</b></li>`; }).join('')}</ul></details>
       <div class="actions">${sh.html}</div>`;
-    sh.bind(after); statBlock($('.gstats', after), 'ghouss', day, tot, 'high'); countdown($('.cd', after)); todayLink(after, 'ghouss');
+    sh.bind(after); addMadeBy(after); statBlock($('.gstats', after), 'ghouss', day, tot, 'high'); countdown($('.cd', after)); todayLink(after, 'ghouss');
   }
   draw();
 }
@@ -639,7 +648,7 @@ function tarikh(arg) {
     const s = st.marks.filter(Boolean).length;
     const sh = shareBtn(() => `📜 Tarikh ${mode === 'daily' ? '#' + day : '∞'} · ${s}${mode === 'daily' ? '/' + (N - 1) : ''}\n${st.marks.map(m => m ? '🟩' : '🟥').join('')}\n${link(mode === 'daily' ? 'tarikh-' + day : 'tarikh-endless')}`);
     after.innerHTML = `<div class="result ${st.lives > 0 ? 'win' : 'lose'}"><p class="rt">${t('score')}</p><h2>${s}${mode === 'daily' ? ' / ' + (N - 1) : ''}</h2><div class="gstats" hidden></div>${mode === 'daily' ? cdHTML(day) : ''}</div><div class="actions">${sh.html}${mode === 'endless' ? `<button class="btn" id="tk-again">${t('again')}</button>` : ''}</div>`;
-    sh.bind(after); if (mode === 'endless') $('#tk-again').onclick = () => tarikh('endless'); else { statBlock($('.gstats', after), 'tarikh', day, s, 'high'); countdown($('.cd', after)); todayLink(after, 'tarikh'); }
+    sh.bind(after); addMadeBy(after); if (mode === 'endless') $('#tk-again').onclick = () => tarikh('endless'); else { statBlock($('.gstats', after), 'tarikh', day, s, 'high'); countdown($('.cd', after)); todayLink(after, 'tarikh'); }
   }
   draw();
 }
@@ -679,7 +688,7 @@ function mnin(cat) {
     const b = LS.get('mnin:best', 0); if (score > b) LS.set('mnin:best', score);
     const sh = shareBtn(() => `📍 Mnin? ${score}/${Q.length}\n${res.map(r => r ? '🟩' : '🟥').join('')}\n${link('mnin')}`);
     after.innerHTML = `<div class="result win"><p class="rt">${t('score')}</p><h2>${score} / ${Q.length}</h2></div><div class="actions">${sh.html}<button class="btn" id="mn-again">${t('again')}</button></div>`;
-    sh.bind(after); $('#mn-again').onclick = () => mnin(cat);
+    sh.bind(after); addMadeBy(after); $('#mn-again').onclick = () => mnin(cat);
   }
   draw();
 }
@@ -733,7 +742,7 @@ function blitz(mode) {
     const left_ = mode === 'gov' ? GOVS.filter(g => !found.has(g.id)).map(g => nm(g)) : missed.map(nameOf);
     const sh = shareBtn(() => `⚡ Blitz ${mode === 'gov' ? L({ en: 'governorates', fr: 'gouvernorats', ar: 'ولايات' }) : L({ en: 'delegations', fr: 'délégations', ar: 'معتمديات' })}: ${won ? '🏆' : '⏱'} ${score}/${GOAL}${won ? ` ${L({ en: 'in', fr: 'en', ar: 'في' })} ${used}s` : ''} (${miss} ✗)\n${link(mode === 'gov' ? 'blitz' : 'blitz-del')}`);
     after.innerHTML = `<div class="result ${won ? 'win' : 'lose'}"><p class="rt">${won ? L({ en: 'You won', fr: 'Victoire', ar: 'فوز' }) : L({ en: 'You lost', fr: 'Défaite', ar: 'خسارة' })}</p><h2>${score} / ${GOAL}</h2><p>${won ? L({ en: `All found in ${used} s with ${miss} mistake(s).`, fr: `Tout trouvé en ${used} s avec ${miss} erreur(s).`, ar: `وجدتها كلها في ${used} ث مع ${miss} خطأ.` }) : L({ en: `${GOAL - score} left to find.`, fr: `Il en restait ${GOAL - score} à trouver.`, ar: `بقي ${GOAL - score} لم تجدها.` })} ${t('best')}: ${Math.max(b, score)}</p>${!won && left_.length ? `<p class="missed"><b>${L({ en: mode === 'gov' ? 'Not found (in red on the map):' : 'Missed:', fr: mode === 'gov' ? 'Non trouvés (en rouge sur la carte) :' : 'Ratées :', ar: mode === 'gov' ? 'لم تجدها (بالأحمر على الخريطة):' : 'أخطأتها:' })}</b> ${left_.map(esc).join(' · ')}</p>` : ''}<div class="gstats" hidden></div></div><div class="actions">${sh.html}<button class="btn" id="bz-again">${t('again')}</button></div>`;
-    sh.bind(after); statBlock($('.gstats', after), mode === 'gov' ? 'blitz' : 'blitz-del', 'all', score, 'high'); $('#bz-again').onclick = () => blitz(mode); after.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    sh.bind(after); addMadeBy(after); statBlock($('.gstats', after), mode === 'gov' ? 'blitz' : 'blitz-del', 'all', score, 'high'); $('#bz-again').onclick = () => blitz(mode); after.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 
@@ -775,7 +784,7 @@ function akthar(mode) {
   function end() {
     const sh = shareBtn(() => `📊 Akthar walla Aqal (${L(M.lab)}): ${streak} ${L({ en: 'in a row', fr: 'd\'affilée', ar: 'متتالية' })}\n${link('akthar' + (mode === 'pop' ? '' : '-' + mode))}`);
     after.innerHTML = `<div class="result lose"><p class="rt">${t('gameover')}</p><h2>${t('streak')}: ${streak}</h2><div class="gstats" hidden></div></div><div class="actions">${sh.html}<button class="btn" id="ak-again">${t('again')}</button></div>`;
-    sh.bind(after); statBlock($('.gstats', after), 'akthar-' + mode, 'all', streak, 'high'); $('#ak-again').onclick = () => akthar(mode);
+    sh.bind(after); addMadeBy(after); statBlock($('.gstats', after), 'akthar-' + mode, 'all', streak, 'high'); $('#ak-again').onclick = () => akthar(mode);
   }
   draw();
 }
@@ -845,7 +854,7 @@ function runParty(body, names) {
   function win() {
     const w = alive()[0];
     body.innerHTML = `${board()}<div class="result win"><p class="rt">🏆</p><h2>${esc(w ? w.n : '—')} ${t('wins')}</h2></div><div class="actions"><button class="btn primary" id="pp-again">${t('again')}</button><a class="btn" href="#">${t('back')}</a></div>`;
-    $('#pp-again').onclick = () => runParty(body, names);
+    $('#pp-again').onclick = () => runParty(body, names); addMadeBy(body);
   }
   pass();
 }
@@ -856,7 +865,7 @@ function defi(code) {
   const body = shell('party', `${L({ en: 'Challenge', fr: 'Défi', ar: 'تحدٍّ' })} ${code}`, 'تحدّي', t('challengeTxt'), `<div class="tstat"></div><div class="qwrap"></div><div class="after"></div>`);
   const stat = $('.tstat', body), qw = $('.qwrap', body), after = $('.after', body);
   let i = 0, score = 0, res = [], t0 = Date.now();
-  const finish = () => { const secs = Math.round((Date.now() - t0) / 1000); LS.set(k, { score, secs }); qw.innerHTML = ''; const sh = shareBtn(() => `🇹🇳 ${L({ en: 'Challenge', fr: 'Défi', ar: 'تحدّي' })} ${code}: ${score}/10 · ${secs}s\n${res.map(x => x ? '🟩' : '🟥').join('')}\n${link('defi-' + code)}`); after.innerHTML = `<div class="result win"><p class="rt">${t('score')}</p><h2>${score} / 10</h2><p>${secs} s</p></div><div class="actions">${sh.html}<button class="btn" id="df-again">${t('again')}</button></div>`; sh.bind(after); $('#df-again').onclick = () => defi(code); };
+  const finish = () => { const secs = Math.round((Date.now() - t0) / 1000); LS.set(k, { score, secs }); qw.innerHTML = ''; const sh = shareBtn(() => `🇹🇳 ${L({ en: 'Challenge', fr: 'Défi', ar: 'تحدّي' })} ${code}: ${score}/10 · ${secs}s\n${res.map(x => x ? '🟩' : '🟥').join('')}\n${link('defi-' + code)}`); after.innerHTML = `<div class="result win"><p class="rt">${t('score')}</p><h2>${score} / 10</h2><p>${secs} s</p></div><div class="actions">${sh.html}<button class="btn" id="df-again">${t('again')}</button></div>`; sh.bind(after); addMadeBy(after); $('#df-again').onclick = () => defi(code); };
   const next = () => { stat.innerHTML = `<span>${i + 1}/10</span><span>${t('score')} <b>${score}</b></span>${prev ? `<span>${t('best')} ${prev.score}/10</span>` : ''}`; if (i >= 10) return finish(); askQ(qw, Q[i], 15, ok => { if (ok) score++; res.push(ok); qw.insertAdjacentHTML('beforeend', `<div class="actions"><button class="btn primary" id="df-next">${t('next')}</button></div>`); $('#df-next').onclick = () => { i++; next(); }; }); };
   if (prev) { body.insertAdjacentHTML('afterbegin', ''); }
   next();
