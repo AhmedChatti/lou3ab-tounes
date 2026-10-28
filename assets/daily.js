@@ -15,19 +15,22 @@ window.DAILY = {
     "Born in 1890.",
     "Studied political economy in Berlin after the First World War.",
     "In 1924 he founded the first trade union run by Tunisians.",
-    "His surname comes from his home town, an oasis in the south."
+    "His surname comes from his home town, an oasis in the south.",
+    "Born in an oasis town west of the city of Gabès."
    ],
    "clues_fr": [
     "Né en 1890.",
     "A étudié l’économie politique à Berlin après la Première Guerre mondiale.",
     "En 1924, il fonde le premier syndicat dirigé par des Tunisiens.",
-    "Son nom vient de sa ville natale, une oasis du sud."
+    "Son nom vient de sa ville natale, une oasis du sud.",
+    "Né dans une ville-oasis à l’ouest de la ville de Gabès."
    ],
    "clues_ar": [
     "وُلد سنة 1890.",
     "درس الاقتصاد السياسي في برلين بعد الحرب العالمية الأولى.",
     "أسّس سنة 1924 أوّل نقابة يديرها تونسيون.",
-    "لقبه مأخوذ من مدينته، واحة في الجنوب."
+    "لقبه مأخوذ من مدينته، واحة في الجنوب.",
+    "وُلد في مدينة واحية غربي مدينة قابس."
    ],
    "born_en": "Born in El Hamma",
    "born_fr": "Né à El Hamma",

@@ -32,8 +32,8 @@ for (const [k, x] of Object.entries(DAILY)) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) E(k, 'key must be YYYY-MM-DD');
   if (x.wilayadle) { if (!G.has(x.wilayadle.g)) E(k, 'wilayadle.g not a governorate id'); ['fact_en', 'fact_fr', 'fact_ar'].forEach(f => str(x.wilayadle, f, k + ' wilayadle')); }
   if (x.chkoun) { const m = x.chkoun; if (!G.has(m.g)) E(k, 'chkoun.g invalid'); str(m, 'name', k + ' chkoun'); if (!['person', 'place'].includes(m.kind)) E(k, 'chkoun.kind must be person|place');
-    for (const l of ['en', 'fr', 'ar']) { if (!Array.isArray(m['clues_' + l]) || m['clues_' + l].length !== 4) E(k, `chkoun.clues_${l} must have exactly 4 clues`); str(m, 'born_' + l, k + ' chkoun'); }
-    const low = (m.clues_fr || []).slice(0, 3).join(' ').toLowerCase(); const gname = TN.govs.find(g => g.id === m.g); if (gname && low.includes(gname.fr.toLowerCase())) E(k, 'chkoun: first 3 clues must not name the governorate'); }
+    for (const l of ['en', 'fr', 'ar']) { if (!Array.isArray(m['clues_' + l]) || m['clues_' + l].length !== 5) E(k, `chkoun.clues_${l} must have exactly 5 clues`); str(m, 'born_' + l, k + ' chkoun'); }
+    const low = (m.clues_fr || []).slice(0, 4).join(' ').toLowerCase(); const gname = TN.govs.find(g => g.id === m.g); if (gname && low.includes(gname.fr.toLowerCase())) E(k, 'chkoun: first 4 clues must not name the governorate'); }
   (x.ghouss || []).forEach((p, i) => { const kk = `${k} ghouss[${i}]`; if (!['gov', 'del'].includes(p.kind)) E(kk, 'kind gov|del'); ['txt_en', 'txt_fr', 'txt_ar'].forEach(f => str(p, f, kk)); if (!Array.isArray(p.valid) || p.valid.length < 2) E(kk, 'valid needs >= 2 ids'); else p.valid.forEach(id => { if (!(p.kind === 'gov' ? G : D).has(id)) E(kk, 'bad id ' + id); }); });
   if ((x.ghouss || []).length > 7) E(k, 'max 7 ghouss prompts');
   (x.tarikh || []).forEach((h, i) => { const kk = `${k} tarikh[${i}]`; if (typeof h.y !== 'number') E(kk, 'y must be a number'); ['en', 'fr', 'ar', 'd_en', 'd_fr', 'd_ar'].forEach(f => str(h, f, kk)); if (h.g && !G.has(h.g)) E(kk, 'g invalid'); if (HISTORY.some(o => o.fr === h.fr)) E(kk, 'duplicate of existing event'); });

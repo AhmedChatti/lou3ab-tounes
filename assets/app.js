@@ -150,9 +150,10 @@ function mapSVG(o = {}) {
 }
 function setCls(root, id, cls, on = true) { $$(`[data-id="${id}"]`, root).forEach(p => p.classList.toggle(cls, on)); }
 function onPick(root, fn) {
-  root.addEventListener('click', e => { const p = e.target.closest('[data-id]'); if (p) fn(p.dataset.id, p); });
-  root.addEventListener('pointerover', e => { const p = e.target.closest('[data-id]'); if (p) $$(`[data-id="${p.dataset.id}"]`, root).forEach(q => q.classList.add('hov')); });
-  root.addEventListener('pointerout', e => { const p = e.target.closest('[data-id]'); if (p) $$(`[data-id="${p.dataset.id}"]`, root).forEach(q => q.classList.remove('hov')); });
+  // property handlers (not addEventListener) so re-binding replaces the previous round's handler
+  root.onclick = e => { const p = e.target.closest('[data-id]'); if (p) fn(p.dataset.id, p); };
+  root.onpointerover = e => { const p = e.target.closest('[data-id]'); if (p) $$(`[data-id="${p.dataset.id}"]`, root).forEach(q => q.classList.add('hov')); };
+  root.onpointerout = e => { const p = e.target.closest('[data-id]'); if (p) $$(`[data-id="${p.dataset.id}"]`, root).forEach(q => q.classList.remove('hov')); };
 }
 function silhouette(g, cls = 'sil') { const [a, b, c, d] = g.bb, w = c - a, h = d - b, p = Math.max(w, h) * 0.08; return `<svg class="${cls}" viewBox="${a - p} ${b - p} ${w + 2 * p} ${h + 2 * p}" aria-label="Mystery shape"><path d="${g.d}"/></svg>`; }
 function miniMap(hi) { return `<svg class="mini" viewBox="-2 -2 346 744" aria-hidden="true"><path class="mini-c" d="${TN.country}"/>${(Array.isArray(hi) ? hi : [hi]).filter(Boolean).map(id => (D[id] ? `<path class="mini-g" d="${G[D[id].g].d}"/>` : '') + `<path class="mini-h" d="${(G[id] || D[id]).d}"/>`).join('')}</svg>`; }
@@ -184,8 +185,10 @@ function hearts(n, max) { return `<span class="hearts" aria-label="${n} lives">$
 function acInput(root, list, onSubmit, placeholder) {
   root.innerHTML = `<form class="ac" autocomplete="off"><input id="ac-in" type="text" placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}"><button class="btn primary" type="submit">${t('guess')}</button><ul class="ac-list" hidden></ul></form>`;
   const inp = $('input', root), ul = $('.ac-list', root); let sel = -1, items = [];
-  const render = () => { const q = norm(inp.value); items = q ? list().filter(x => keys(x.label).concat(keys(x.alt || '')).some(k => k.includes(q) || k.replace(/ /g, '').includes(q.replace(/ /g, '')))).slice(0, 6) : []; ul.hidden = !items.length; ul.innerHTML = items.map((x, i) => `<li data-i="${i}" class="${i === sel ? 'on' : ''}">${esc(x.label)}${x.alt && x.alt !== x.label ? `<span>${esc(x.alt)}</span>` : ''}</li>`).join(''); };
+  const render = () => { const q = norm(inp.value); items = (q || list().some(x => x.face)) ? list().filter(x => keys(x.label).concat(keys(x.alt || '')).some(k => k.includes(q) || k.replace(/ /g, '').includes(q.replace(/ /g, '')))).slice(0, q ? 6 : 50) : []; ul.hidden = !items.length; ul.innerHTML = items.map((x, i) => `<li data-i="${i}" class="${i === sel ? 'on' : ''}">${x.face || ''}<em>${esc(x.label)}</em>${x.alt && x.alt !== x.label ? `<span>${esc(x.alt)}</span>` : ''}</li>`).join(''); };
   inp.oninput = () => { sel = -1; render(); };
+  inp.onfocus = () => { if (list().some(x => x.face)) render(); };
+  inp.onblur = () => setTimeout(() => { ul.hidden = true; }, 150);
   inp.onkeydown = e => { if (e.key === 'ArrowDown') { sel = Math.min(items.length - 1, sel + 1); render(); e.preventDefault(); } if (e.key === 'ArrowUp') { sel = Math.max(0, sel - 1); render(); e.preventDefault(); } };
   ul.onpointerdown = e => { const li = e.target.closest('li'); if (li) { e.preventDefault(); inp.value = items[+li.dataset.i].label; ul.hidden = true; $('form', root).requestSubmit(); } };
   $('form', root).onsubmit = e => { e.preventDefault(); let v = inp.value; if (sel >= 0 && items[sel]) v = items[sel].label; if (!v.trim()) return; ul.hidden = true; if (onSubmit(v) !== false) { inp.value = ''; sel = -1; } else inp.parentNode.classList.add('shake'), setTimeout(() => inp.parentNode.classList.remove('shake'), 400); };
@@ -199,7 +202,7 @@ const govList = () => GOVS.map(g => ({ label: nm(g), alt: LANG === 'ar' ? g.fr :
 const GAMES = [
   { id: 'wilayadle', name: 'Wilayadle', ar: 'ولايدل', daily: true, d: { en: 'Guess the governorate: region, coast, borders, population, area… green, orange or red.', fr: 'Devine le gouvernorat : région, littoral, frontières, population, superficie… vert, orange ou rouge.', ar: 'خمّن الولاية: الإقليم، الساحل، الحدود، السكان، المساحة… أخضر أو برتقالي أو أحمر.' } },
   { id: 'persondle', name: 'Persondle', ar: 'شخصدل', daily: true, d: { en: 'Guess the Tunisian personality: field, birthplace, birth year… each column gets warmer.', fr: 'Devine la personnalité tunisienne : domaine, lieu et année de naissance… chaque colonne te guide.', ar: 'خمّن الشخصية التونسية: المجال، مكان وسنة الولادة… كل عمود يرشدك.' } },
-  { id: 'chkoun', name: 'Chkoun?', ar: 'شكون؟', daily: true, d: { en: 'A mystery person or place, told in clues. Three guesses on the map to find where they come from.', fr: 'Une personne ou un lieu mystère, raconté en indices. Trois essais sur la carte pour trouver d\'où il vient.', ar: 'شخصية أو مكان غامض عبر تلميحات. ثلاث محاولات على الخريطة لمعرفة أصله.' } },
+  { id: 'chkoun', name: 'Chkoun?', ar: 'شكون؟', daily: true, d: { en: 'A mystery person or place. One clue to start, a new one after each wrong guess on the map.', fr: 'Une personne ou un lieu mystère. Un indice au départ, un nouveau après chaque erreur sur la carte.', ar: 'شخصية أو مكان غامض. تلميح واحد في البداية وآخر بعد كل خطأ على الخريطة.' } },
   { id: 'ghouss', name: 'Ghouss', ar: 'غوص', daily: true, d: { en: 'Seven prompts a day. The more obscure your answer, the deeper you dive.', fr: 'Sept questions par jour. Plus ta réponse est rare, plus tu plonges profond.', ar: 'سبعة أسئلة يومياً. كلما كانت إجابتك أندر، غصت أعمق.' } },
   { id: 'tarikh', name: 'Tarikh', ar: 'تاريخ', daily: true, d: { en: 'Put Tunisian history in order, from Carthage to the Quartet, via Louis IX and the Hafsids.', fr: 'Remets l\'histoire de la Tunisie dans l\'ordre, de Carthage au Quartet, en passant par Saint Louis et les Hafsides.', ar: 'رتّب تاريخ تونس من قرطاج إلى الرباعي، مروراً بلويس التاسع والحفصيين.' } },
   { id: 'mnin', name: 'Mnin?', ar: 'منين؟', d: { en: 'Singers, clubs, dishes, monuments: tap where each one comes from.', fr: 'Chanteurs, clubs, plats, monuments : touche d\'où vient chacun.', ar: 'مطربون، نوادٍ، أطباق، معالم: اضغط على أصل كل واحد.' } },
@@ -328,6 +331,9 @@ function wilayadle(day) {
 const FIELD = { music: { en: 'Music', fr: 'Musique', ar: 'موسيقى' }, sport: { en: 'Sport', fr: 'Sport', ar: 'رياضة' }, politics: { en: 'Politics', fr: 'Politique', ar: 'سياسة' }, history: { en: 'History', fr: 'Histoire', ar: 'تاريخ' }, literature: { en: 'Literature', fr: 'Littérature', ar: 'أدب' }, cinema: { en: 'Cinema', fr: 'Cinéma', ar: 'سينما' } };
 const FGROUP = { music: 'arts', cinema: 'arts', literature: 'arts', politics: 'public', history: 'public', sport: 'sport' };
 const pname = p => LANG === 'ar' ? p.ar : p.name;
+const slug = n => n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const initials = p => p.name.replace(/^(El|Al|Ibn|Abou?l?)[- ]/i, '').split(/[ -]/).filter(Boolean).map(w => w[0]).slice(0, 2).join('');
+const pface = (p, cls = '') => `<i class="avatar f-${p.field} ${cls}" aria-hidden="true"><b>${esc(initials(p))}</b><img src="${esc(p.photo || 'assets/people/' + slug(p.name) + '.jpg')}" alt="" loading="lazy" onerror="this.remove()"></i>`;
 function persondle(day) {
   const P = window.PEOPLE; const byId = Object.fromEntries(P.map(p => [p.id, p]));
   const PIDX = buildIndex(P.map(p => ({ id: p.id, en: p.name, fr: p.name, ar: p.ar })));
@@ -337,9 +343,9 @@ function persondle(day) {
     ph: { en: 'Type a name…', fr: 'Tape un nom…', ar: 'اكتب اسماً…' }, unknown: { en: 'Not in the list', fr: 'Pas dans la liste', ar: 'غير موجود في القائمة' },
     target: d => { const x = DD(d).persondle; return (x && byId[x.id]) || dailyItem(P.filter(p => !p.day), 'persondle', d); },
     byId: id => byId[id], label: pname, alt: p => LANG === 'ar' ? p.name : p.ar,
-    list: () => P.filter(p => !p.day || p.day <= TODAY).map(p => ({ id: p.id, label: pname(p), alt: LANG === 'ar' ? p.name : p.ar })).sort((a, b) => a.label.localeCompare(b.label)),
+    list: () => P.filter(p => !p.day || p.day <= TODAY).map(p => ({ id: p.id, label: pname(p), alt: LANG === 'ar' ? p.name : p.ar, face: pface(p, 'sm') })).sort((a, b) => a.label.localeCompare(b.label)),
     match: v => matchAll(v, PIDX),
-    face: p => `<i class="avatar f-${p.field}" aria-hidden="true">${esc(p.name.replace(/^(El|Al|Ibn|Abou?l?)[- ]/i, '').split(/[ -]/).filter(Boolean).map(w => w[0]).slice(0, 2).join(''))}</i>`,
+    face: p => pface(p),
     cols: [
       { head: { en: 'Field', fr: 'Domaine', ar: 'المجال' }, cell: (g, t) => ({ cls: g.field === t.field ? 'ok' : FGROUP[g.field] === FGROUP[t.field] ? 'part' : 'no', txt: L(FIELD[g.field]) }) },
       { head: { en: 'Gender', fr: 'Genre', ar: 'الجنس' }, cell: (g, t) => ({ cls: g.sex === t.sex ? 'ok' : 'no', txt: L(g.sex === 'F' ? { en: 'Woman', fr: 'Femme', ar: 'امرأة' } : { en: 'Man', fr: 'Homme', ar: 'رجل' }) }) },
@@ -362,11 +368,11 @@ function persondle(day) {
    ========================================================= */
 function chkoun(day) {
   day = Math.min(Math.max(1, day || TODAY), TODAY);
-  const M = DD(day).chkoun || dailyItem(FACTS.mysteries, 'chkoun', day); const key = 'chkoun:' + day; const MAX = 3;
+  const M = DD(day).chkoun || dailyItem(FACTS.mysteries, 'chkoun', day); const key = 'chkoun:' + day; const MAX = 5;
   let st = LS.get(key + ':state', { guesses: [], done: false, won: false });
   const clues = M['clues_' + LANG] || M.clues_fr || M.clues_en;
   const kindTxt = M.kind === 'person' ? L({ en: 'Mystery person', fr: 'Personnalité mystère', ar: 'شخصية غامضة' }) : L({ en: 'Mystery place', fr: 'Lieu mystère', ar: 'مكان غامض' });
-  const body = shell('chkoun', 'Chkoun?', 'شكون؟', L({ en: 'One mystery, three guesses. Where is it from?', fr: 'Un mystère, trois essais. D\'où ça vient ?', ar: 'لغز واحد وثلاث محاولات. من أين أصله؟' }), `
+  const body = shell('chkoun', 'Chkoun?', 'شكون؟', L({ en: 'One mystery, five clues. Each wrong guess reveals the next clue. Where is it from?', fr: 'Un mystère, cinq indices. Chaque erreur dévoile l\'indice suivant. D\'où ça vient ?', ar: 'لغز واحد وخمسة تلميحات. كل خطأ يكشف التلميح التالي. من أين أصله؟' }), `
     ${dayPicker('chkoun', day, TODAY)}
     <div class="story"><p class="kind">${kindTxt} #${day}</p><ol class="clues"></ol>${LANG === 'ar' ? `<p class="note">${t('factLang')}</p>` : ''}</div>
     <div class="mapwrap"></div><div class="pickbar"></div><div class="after"></div>`);
@@ -374,7 +380,7 @@ function chkoun(day) {
   let sel = null;
   const save = () => LS.set(key + ':state', st);
   function draw() {
-    const shown = st.done ? clues.length : Math.min(clues.length, 2 + st.guesses.length);
+    const shown = st.done ? clues.length : Math.min(clues.length, 1 + st.guesses.length);
     ol.innerHTML = clues.map((c, i) => `<li class="${i < shown ? 'on' : ''}">${i < shown ? esc(c) : '•••'}</li>`).join('');
     mw.innerHTML = mapSVG({ level: 'gov', inset: true, cls: id => (st.guesses.includes(id) ? (id === M.g ? 'good' : 'bad') : '') + (st.done && id === M.g ? ' target' : '') + (id === sel ? ' sel' : '') });
     st.guesses.filter(id => id !== M.g).forEach(id => { const g = G[id]; const p = $(`.map`, mw); p.insertAdjacentHTML('beforeend', `<text class="dist" x="${g.lx}" y="${g.ly}">${fmt(km(g, G[M.g]))} km</text>`); });
@@ -559,30 +565,50 @@ function mnin(cat) {
    ========================================================= */
 function blitz(mode) {
   mode = mode === 'del' ? 'del' : 'gov';
-  const body = shell('blitz', 'Blitz', 'بليتز', L({ en: 'Find as many as you can before the clock runs out.', fr: 'Trouve-en un max avant la fin du chrono.', ar: 'جد أكبر عدد ممكن قبل انتهاء الوقت.' }), `
+  const GOAL = mode === 'gov' ? 24 : 15;
+  const body = shell('blitz', 'Blitz', 'بليتز', L(mode === 'gov' ? { en: 'Find all 24 governorates in 60 seconds to win.', fr: 'Trouve les 24 gouvernorats en 60 secondes pour gagner.', ar: 'جد الولايات الأربع والعشرين في 60 ثانية لتفوز.' } : { en: 'Find 15 delegations in 90 seconds to win.', fr: 'Trouve 15 délégations en 90 secondes pour gagner.', ar: 'جد 15 معتمدية في 90 ثانية لتفوز.' }), `
     <div class="tmodes"><a class="btn sm ${mode === 'gov' ? 'primary' : 'ghost'}" href="#blitz">${L({ en: 'Governorates · 60 s', fr: 'Gouvernorats · 60 s', ar: 'الولايات · 60 ث' })}</a><a class="btn sm ${mode === 'del' ? 'primary' : 'ghost'}" href="#blitz-del">${L({ en: 'Delegations · 90 s', fr: 'Délégations · 90 s', ar: 'المعتمديات · 90 ث' })}</a></div>
-    <div class="blitzbar"><span class="target-n"></span><span class="clock"></span><span class="bs">0</span></div><div class="mapwrap"></div><div class="after"></div>`);
-  const mw = $('.mapwrap', body), tn = $('.target-n', body), clock = $('.clock', body), bs = $('.bs', body), after = $('.after', body);
-  const TIME = mode === 'gov' ? 60 : 90; let left = TIME, score = 0, miss = 0, queue = [], target = null, gov = null, timer = null, started = false, lock = false;
+    <div class="blitzbar"><span class="target-n"></span><span class="clock"></span><span class="bs">0/${GOAL}</span></div>
+    <div class="bz-fb" aria-live="assertive"></div><div class="mapwrap"></div><div class="after"></div>`);
+  const mw = $('.mapwrap', body), tn = $('.target-n', body), clock = $('.clock', body), bs = $('.bs', body), after = $('.after', body), fb = $('.bz-fb', body);
+  const TIME = mode === 'gov' ? 60 : 90; let left = TIME, score = 0, miss = 0, queue = [], target = null, gov = null, timer = null, started = false, lock = false, over = false;
+  const found = new Set(), missed = [];
+  const nameOf = id => nm(G[id] || D[id]);
+  function feedback(ok, txt) { fb.className = 'bz-fb show ' + (ok ? 'good' : 'bad'); fb.innerHTML = txt; clearTimeout(fb._t); fb._t = setTimeout(() => fb.classList.remove('show'), ok ? 700 : 1400); }
   function nextGov() { gov = pick(GOVS).id; queue = shuffle(DELS.filter(d => d.g === gov).map(d => d.id)); mw.innerHTML = mapSVG({ level: 'del', gov }); bindMap(); }
   function next() {
-    if (mode === 'gov') { if (!queue.length) { queue = shuffle(GOVS.map(g => g.id)); $$('.done', mw).forEach(p => p.classList.remove('done')); } }
+    if (mode === 'gov') { if (!queue.length) queue = shuffle(GOVS.map(g => g.id).filter(id => !found.has(id))); }
     else if (!queue.length) nextGov();
     target = queue.pop();
-    tn.innerHTML = `${t('find')} <b>${esc(nm(G[target] || D[target]))}</b>${mode === 'del' ? ` <small>· ${esc(nm(G[gov]))}</small>` : ''}`;
+    tn.innerHTML = `${t('find')} <b>${esc(nameOf(target))}</b>${mode === 'del' ? ` <small>· ${esc(nm(G[gov]))}</small>` : ''}`;
   }
   function bindMap() { onPick(mw, id => {
-    if (!started || lock || left <= 0) return;
-    if (id === target) { score++; bs.textContent = score; setCls(mw, id, 'done'); setCls(mw, id, 'flash-g'); setTimeout(() => setCls(mw, id, 'flash-g', false), 350); next(); }
-    else { miss++; lock = true; setCls(mw, id, 'flash-r'); setCls(mw, target, 'target'); setTimeout(() => { setCls(mw, id, 'flash-r', false); setCls(mw, target, 'target', false); lock = false; queue.unshift(target); next(); }, 700); }
+    if (!started || lock || over) return;
+    if (id === target) {
+      score++; found.add(id); bs.textContent = `${score}/${GOAL}`; setCls(mw, id, 'done'); setCls(mw, id, 'flash-g'); setTimeout(() => setCls(mw, id, 'flash-g', false), 350);
+      feedback(true, `✓ ${esc(nameOf(id))}`);
+      if (score >= GOAL) return end(true);
+      next();
+    } else {
+      miss++; lock = true; if (!missed.includes(target)) missed.push(target);
+      setCls(mw, id, 'flash-r'); setCls(mw, target, 'target');
+      feedback(false, `✗ ${L({ en: 'That\'s', fr: 'Ça, c\'est', ar: 'هذه' })} <b>${esc(nameOf(id))}</b>. <b>${esc(nameOf(target))}</b> ${L({ en: 'is the one flashing.', fr: 'est celui qui clignote.', ar: 'هي التي تومض.' })}`);
+      setTimeout(() => { setCls(mw, id, 'flash-r', false); setCls(mw, target, 'target', false); lock = false; if (!over) { queue.unshift(target); next(); } }, 900);
+    }
   }); }
   if (mode === 'gov') { mw.innerHTML = mapSVG({ level: 'gov', inset: true }); bindMap(); } else nextGov();
   tn.innerHTML = `<button class="btn primary" id="bz-go">${t('start')}</button>`; clock.textContent = TIME + ' s';
-  $('#bz-go').onclick = () => { started = true; next(); timer = setInterval(() => { if (!document.body.contains(clock)) return clearInterval(timer); left--; clock.textContent = left + ' s'; clock.classList.toggle('hot', left <= 10); if (left <= 0) { clearInterval(timer); end(); } }, 1000); };
-  function end() {
-    tn.innerHTML = t('gameover'); const k = 'blitz:best' + (mode === 'del' ? ':del' : ''); const b = LS.get(k, 0); if (score > b) LS.set(k, score); if (mode === 'gov' && score > LS.get('blitz:best', 0)) LS.set('blitz:best', score);
-    const sh = shareBtn(() => `⚡ Blitz ${mode === 'gov' ? L({ en: 'governorates', fr: 'gouvernorats', ar: 'ولايات' }) : L({ en: 'delegations', fr: 'délégations', ar: 'معتمديات' })}: ${score} ${L({ en: 'found', fr: 'trouvés', ar: 'إجابة' })} (${miss} ✗) in ${TIME}s\n${link(mode === 'gov' ? 'blitz' : 'blitz-del')}`);
-    after.innerHTML = `<div class="result win"><p class="rt">${t('score')}</p><h2>${score}</h2><p>${t('best')}: ${Math.max(b, score)}</p></div><div class="actions">${sh.html}<button class="btn" id="bz-again">${t('again')}</button></div>`;
+  $('#bz-go').onclick = () => { started = true; next(); timer = setInterval(() => { if (!document.body.contains(clock)) return clearInterval(timer); left--; clock.textContent = left + ' s'; clock.classList.toggle('hot', left <= 10); if (left <= 0) end(false); }, 1000); };
+  function end(won) {
+    if (over) return; over = true; clearInterval(timer);
+    const used = TIME - left;
+    tn.innerHTML = won ? `🏆 <b>${L({ en: 'You won!', fr: 'Gagné !', ar: 'فزت!' })}</b>` : `⏱ <b>${L({ en: 'Time\'s up, you lost', fr: 'Temps écoulé, perdu', ar: 'انتهى الوقت، خسرت' })}</b>`;
+    const k = 'blitz:best' + (mode === 'del' ? ':del' : ''); const b = LS.get(k, 0); if (score > b) LS.set(k, score); if (mode === 'gov' && score > LS.get('blitz:best', 0)) LS.set('blitz:best', score);
+    // show what was left on the map
+    if (mode === 'gov') GOVS.filter(g => !found.has(g.id)).forEach(g => setCls(mw, g.id, 'bad'));
+    const left_ = mode === 'gov' ? GOVS.filter(g => !found.has(g.id)).map(g => nm(g)) : missed.map(nameOf);
+    const sh = shareBtn(() => `⚡ Blitz ${mode === 'gov' ? L({ en: 'governorates', fr: 'gouvernorats', ar: 'ولايات' }) : L({ en: 'delegations', fr: 'délégations', ar: 'معتمديات' })}: ${won ? '🏆' : '⏱'} ${score}/${GOAL}${won ? ` ${L({ en: 'in', fr: 'en', ar: 'في' })} ${used}s` : ''} (${miss} ✗)\n${link(mode === 'gov' ? 'blitz' : 'blitz-del')}`);
+    after.innerHTML = `<div class="result ${won ? 'win' : 'lose'}"><p class="rt">${won ? L({ en: 'You won', fr: 'Victoire', ar: 'فوز' }) : L({ en: 'You lost', fr: 'Défaite', ar: 'خسارة' })}</p><h2>${score} / ${GOAL}</h2><p>${won ? L({ en: `All found in ${used} s with ${miss} mistake(s).`, fr: `Tout trouvé en ${used} s avec ${miss} erreur(s).`, ar: `وجدتها كلها في ${used} ث مع ${miss} خطأ.` }) : L({ en: `${GOAL - score} left to find.`, fr: `Il en restait ${GOAL - score} à trouver.`, ar: `بقي ${GOAL - score} لم تجدها.` })} ${t('best')}: ${Math.max(b, score)}</p>${!won && left_.length ? `<p class="missed"><b>${L({ en: mode === 'gov' ? 'Not found (in red on the map):' : 'Missed:', fr: mode === 'gov' ? 'Non trouvés (en rouge sur la carte) :' : 'Ratées :', ar: mode === 'gov' ? 'لم تجدها (بالأحمر على الخريطة):' : 'أخطأتها:' })}</b> ${left_.map(esc).join(' · ')}</p>` : ''}</div><div class="actions">${sh.html}<button class="btn" id="bz-again">${t('again')}</button></div>`;
     sh.bind(after); $('#bz-again').onclick = () => blitz(mode); after.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }

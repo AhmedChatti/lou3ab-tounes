@@ -1,4 +1,5 @@
-/* Persondle roster. Birthplace & birth year checked on Wikipedia (Oct 2026).
+/* Persondle roster.
+   Optional photo: put an image you have the rights to in assets/people/ and add  photo:'assets/people/<file>.jpg'  to the entry. Birthplace & birth year checked on Wikipedia (Oct 2026).
    g = governorate of birth · y = birth year (negative = BC) · alive = living per source.
    field: music | sport | politics | literature | cinema | history */
 window.PEOPLE = [
@@ -31,9 +32,20 @@ window.PEOPLE = [
   { name:'Aboul-Qacem Chebbi', ar:'أبو القاسم الشابي', sex:'M', field:'literature', g:'TN-72', y:1909, alive:false, k_en:'Poet of the national anthem', k_fr:'Poète de l\'hymne national', k_ar:'شاعر النشيد الوطني' },
   { name:'Mahmoud Messadi', ar:'محمود المسعدي', sex:'M', field:'literature', g:'TN-21', y:1911, alive:false, k_en:'Author of “Haddatha Abu Hurayra qala”', k_fr:'Auteur de « Haddatha Abou Hourayra qal »', k_ar:'صاحب «حدّث أبو هريرة قال»' },
   { name:'Ali Douagi', ar:'علي الدوعاجي', sex:'M', field:'literature', g:'TN-11', y:1909, alive:false, k_en:'Satirist of the Taht Essour group', k_fr:'Satiriste du groupe Taht Essour', k_ar:'من جماعة تحت السور' },
-  { name:'Albert Memmi', ar:'ألبير ممي', sex:'M', field:'literature', g:'TN-11', y:1920, alive:false, k_en:'Author of “The Pillar of Salt”', k_fr:'Auteur de « La Statue de sel »', k_ar:'صاحب «تمثال الملح»' },
   { name:'Moufida Tlatli', ar:'مفيدة التلاتلي', sex:'F', field:'cinema', g:'TN-11', y:1947, alive:false, k_en:'Director of “The Silences of the Palace”', k_fr:'Réalisatrice des « Silences du palais »', k_ar:'مخرجة «صمت القصور»' },
   { name:'Nouri Bouzid', ar:'النوري بوزيد', sex:'M', field:'cinema', g:'TN-61', y:1945, alive:true, k_en:'Director of “Man of Ashes”', k_fr:'Réalisateur de « L\'Homme de cendres »', k_ar:'مخرج «ريح السد»' },
   { name:'Férid Boughedir', ar:'فريد بوغدير', sex:'M', field:'cinema', g:'TN-13', y:1944, alive:true, k_en:'Director of “Halfaouine”', k_fr:'Réalisateur de « Halfaouine »', k_ar:'مخرج «عصفور السطح»' },
-  { name:'Abdellatif Kechiche', ar:'عبد اللطيف كشيش', sex:'M', field:'cinema', g:'TN-11', y:1960, alive:true, k_en:'Palme d\'Or 2013', k_fr:'Palme d\'or 2013', k_ar:'السعفة الذهبية 2013' }
+  { name:'Abdellatif Kechiche', ar:'عبد اللطيف كشيش', sex:'M', field:'cinema', g:'TN-11', y:1960, alive:true, k_en:'Palme d\'Or 2013', k_fr:'Palme d\'or 2013', k_ar:'السعفة الذهبية 2013' },
+  { name:'Ahmed Ben Salah', ar:'أحمد بن صالح', sex:'M', field:'politics', g:'TN-52', y:1926, alive:false, k_en:'Led the 1960s cooperatives policy', k_fr:'Artisan des coopératives des années 1960', k_ar:'مهندس تجربة التعاضد في الستينات' },
+  { name:'Mohamed Mzali', ar:'محمد مزالي', sex:'M', field:'politics', g:'TN-52', y:1925, alive:false, k_en:'Prime minister 1980–1986', k_fr:'Premier ministre de 1980 à 1986', k_ar:'وزير أوّل من 1980 إلى 1986' },
+  { name:'Ahmed Tlili', ar:'أحمد التليلي', sex:'M', field:'politics', g:'TN-71', y:1916, alive:false, k_en:'Secretary-general of the UGTT', k_fr:'Secrétaire général de l\'UGTT', k_ar:'أمين عام الاتحاد العام التونسي للشغل' },
+  { name:'Habib Achour', ar:'الحبيب عاشور', sex:'M', field:'politics', g:'TN-61', y:1913, alive:false, k_en:'Led the UGTT three times', k_fr:'A dirigé l\'UGTT à trois reprises', k_ar:'قاد اتحاد الشغل ثلاث مرات' },
+  { name:'Ahmed Mestiri', ar:'أحمد المستيري', sex:'M', field:'politics', g:'TN-11', y:1925, alive:false, k_en:'Founder of the MDS opposition party', k_fr:'Fondateur du parti d\'opposition MDS', k_ar:'مؤسّس حركة الديمقراطيين الاشتراكيين' },
+  { name:'Tahar Ben Achour', ar:'الطاهر بن عاشور', sex:'M', field:'history', g:'TN-11', y:1879, alive:false, k_en:'Author of the tafsir “al-Tahrir wa al-Tanwir”', k_fr:'Auteur du tafsir « al-Tahrir wa al-Tanwir »', k_ar:'صاحب تفسير «التحرير والتنوير»' },
+  { name:'Karim Haggui', ar:'كريم الحقي', sex:'M', field:'sport', g:'TN-42', y:1984, alive:true, k_en:'Defender, Tunisia national team', k_fr:'Défenseur de la sélection nationale', k_ar:'مدافع المنتخب الوطني' },
+  { name:'Aymen Abdennour', ar:'أيمن عبد النور', sex:'M', field:'sport', g:'TN-51', y:1989, alive:true, k_en:'Defender who played for Monaco and Valencia', k_fr:'Défenseur passé par Monaco et Valence', k_ar:'مدافع لعب لموناكو وفالنسيا' },
+  { name:'Zoubeir Baya', ar:'زبير بية', sex:'M', field:'sport', g:'TN-51', y:1971, alive:true, k_en:'Footballer, Tunisia national team', k_fr:'Footballeur de la sélection nationale', k_ar:'لاعب المنتخب الوطني لكرة القدم' },
+  { name:'Marwa Amri', ar:'مروى العامري', sex:'F', field:'sport', g:'TN-11', y:1989, alive:true, k_en:'Olympic wrestling bronze 2016', k_fr:'Bronze olympique en lutte 2016', k_ar:'برونزية أولمبية في المصارعة 2016' },
+  { name:'Mohamed Zran', ar:'محمد زرن', sex:'M', field:'cinema', g:'TN-82', y:1959, alive:true, k_en:'Director of “Essaïda”', k_fr:'Réalisateur d\'« Essaïda »', k_ar:'مخرج «السيدة»' },
+  { name:'Kaouther Ben Hania', ar:'كوثر بن هنية', sex:'F', field:'cinema', g:'TN-43', y:1977, alive:true, k_en:'Director of “The Man Who Sold His Skin”', k_fr:'Réalisatrice de « L\'Homme qui a vendu sa peau »', k_ar:'مخرجة «الرجل الذي باع ظهره»' }
 ];
