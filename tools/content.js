@@ -8,10 +8,12 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const A = p => path.join(__dirname, '..', 'assets', p);
 const ctx = { window: {} }; vm.createContext(ctx);
-for (const f of ['data.js', 'facts.js', 'history.js', 'people.js', 'daily.js']) vm.runInContext(fs.readFileSync(A(f), 'utf8'), ctx, { filename: f });
-const { TN, FACTS, HISTORY, PEOPLE = [], DAILY = {} } = ctx.window;
+for (const f of ['data.js', 'facts.js', 'history.js', 'people.js', 'ghouss.js', 'daily.js']) vm.runInContext(fs.readFileSync(A(f), 'utf8'), ctx, { filename: f });
+const { TN, FACTS, HISTORY, PEOPLE = [], GHOUSS = [], DAILY = {} } = ctx.window;
+const GHB = new Set(GHOUSS.map(x => x.id).concat(Object.values(DAILY).flatMap(x => (x.ghouss_items || []).map(i => i.id))));
 const G = new Set(TN.govs.map(g => g.id)), D = new Set(TN.dels.map(d => d.id));
 const cmd = process.argv[2];
+if (cmd === 'ghouss') { GHOUSS.concat(Object.values(DAILY).flatMap(x => x.ghouss_items || [])).filter(x => !process.argv[3] || x.cat === process.argv[3]).forEach(x => console.log([x.id, x.cat, x.fr, x.t, (x.tags || []).join(',')].join('\t'))); process.exit(0); }
 if (cmd === 'govs') { TN.govs.forEach(g => console.log([g.id, g.fr, g.ar, g.p24, g.area, g.region, g.nb.join(' ')].join('\t'))); process.exit(0); }
 if (cmd === 'dels') { TN.dels.filter(d => !process.argv[3] || d.g === process.argv[3]).forEach(d => console.log([d.id, d.g, d.fr, d.ar, d.p24].join('\t'))); process.exit(0); }
 if (cmd === 'used') {
@@ -34,8 +36,9 @@ for (const [k, x] of Object.entries(DAILY)) {
   if (x.chkoun) { const m = x.chkoun; if (!G.has(m.g)) E(k, 'chkoun.g invalid'); str(m, 'name', k + ' chkoun'); if (!['person', 'place'].includes(m.kind)) E(k, 'chkoun.kind must be person|place');
     for (const l of ['en', 'fr', 'ar']) { if (!Array.isArray(m['clues_' + l]) || m['clues_' + l].length !== 5) E(k, `chkoun.clues_${l} must have exactly 5 clues`); str(m, 'born_' + l, k + ' chkoun'); }
     const low = (m.clues_fr || []).slice(0, 4).join(' ').toLowerCase(); const gname = TN.govs.find(g => g.id === m.g); if (gname && low.includes(gname.fr.toLowerCase())) E(k, 'chkoun: first 4 clues must not name the governorate'); }
-  (x.ghouss || []).forEach((p, i) => { const kk = `${k} ghouss[${i}]`; if (!['gov', 'del'].includes(p.kind)) E(kk, 'kind gov|del'); ['txt_en', 'txt_fr', 'txt_ar'].forEach(f => str(p, f, kk)); if (!Array.isArray(p.valid) || p.valid.length < 2) E(kk, 'valid needs >= 2 ids'); else p.valid.forEach(id => { if (!(p.kind === 'gov' ? G : D).has(id)) E(kk, 'bad id ' + id); }); });
-  if ((x.ghouss || []).length > 7) E(k, 'max 7 ghouss prompts');
+  (x.ghouss_items || []).forEach((it, i) => { const kk = `${k} ghouss_items[${i}]`; if (!/^[fepc]-[a-z0-9-]+$/.test(it.id || '')) E(kk, 'id must look like f-name / e-name / p-name / c-name'); if (GHOUSS.some(g => g.id === it.id)) E(kk, 'id already exists'); if (!['food', 'event', 'player', 'club'].includes(it.cat)) E(kk, 'cat food|event|player|club'); ['fr', 'en'].forEach(f => str(it, f, kk)); if (![1, 2, 3].includes(it.t)) E(kk, 't must be 1, 2 or 3'); if (!Array.isArray(it.tags)) E(kk, 'tags must be an array'); });
+  (x.ghouss || []).forEach((p, i) => { const kk = `${k} ghouss[${i}]`; ['txt_en', 'txt_fr', 'txt_ar'].forEach(f => str(p, f, kk)); if (!Array.isArray(p.valid) || p.valid.length < 4) E(kk, 'valid needs >= 4 ids from assets/ghouss.js or ghouss_items'); else p.valid.forEach(id => { if (!GHB.has(id)) E(kk, 'unknown answer id ' + id); }); });
+  if ((x.ghouss || []).length > 3) E(k, 'max 3 custom ghouss prompts');
   (x.tarikh || []).forEach((h, i) => { const kk = `${k} tarikh[${i}]`; if (typeof h.y !== 'number') E(kk, 'y must be a number'); ['en', 'fr', 'ar', 'd_en', 'd_fr', 'd_ar'].forEach(f => str(h, f, kk)); if (h.g && !G.has(h.g)) E(kk, 'g invalid'); if (HISTORY.some(o => o.fr === h.fr)) E(kk, 'duplicate of existing event'); });
   (x.mnin || []).forEach((o, i) => { const kk = `${k} mnin[${i}]`; if (!Array.isArray(o.g) || !o.g.length || o.g.some(id => !G.has(id))) E(kk, 'g must be array of governorate ids'); if (!CATS.includes(o.cat)) E(kk, 'cat must be one of ' + CATS); ['en', 'fr', 'ar', 'sub_en', 'sub_fr', 'sub_ar', 'why_en', 'why_fr', 'why_ar'].forEach(f => str(o, f, kk)); });
   if (x.persondle) { const p = x.persondle, kk = k + ' persondle'; ['name', 'ar', 'k_en', 'k_fr', 'k_ar'].forEach(f => str(p, f, kk)); if (!['M', 'F'].includes(p.sex)) E(kk, 'sex M|F'); if (!['music', 'sport', 'politics', 'history', 'literature', 'cinema'].includes(p.field)) E(kk, 'field invalid'); if (!G.has(p.g)) E(kk, 'g invalid'); if (!Number.isInteger(p.y)) E(kk, 'y must be an integer year'); if (typeof p.alive !== 'boolean') E(kk, 'alive must be true/false'); if (PEOPLE.some(q => q.name === p.name) || Object.entries(DAILY).some(([k2, y]) => k2 !== k && y.persondle && y.persondle.name === p.name)) E(kk, 'person already used'); }

@@ -204,7 +204,8 @@ function statBlock(el, game, day, v, better, o = {}) {
   statsPost(game, day, v).then(s => {
     if (!s || !s.n) return;
     const p = pctBetter(s.hist, v, better);
-    const who = day === 'all' ? L({ en: 'games played', fr: 'parties jouées', ar: 'جولة لُعبت' }) : L({ en: 'players today', fr: 'joueurs aujourd\'hui', ar: 'لاعب اليوم' });
+    const one = s.n === 1;
+    const who = day === 'all' ? L({ en: one ? 'game played' : 'games played', fr: one ? 'partie jouée' : 'parties jouées', ar: 'جولة لُعبت' }) : L({ en: one ? 'player today' : 'players today', fr: one ? 'joueur aujourd\'hui' : 'joueurs aujourd\'hui', ar: 'لاعب اليوم' });
     let line = p == null ? L({ en: 'You are the first to finish! 🥇', fr: 'Tu es le premier à finir ! 🥇', ar: 'أنت أوّل من أنهى! 🥇' })
       : o.failed ? L({ en: `${p}% of players also missed or took more guesses.`, fr: `${p} % des joueurs ont aussi raté ou mis plus d'essais.`, ar: `${p}% من اللاعبين أخطؤوا أيضاً أو احتاجوا محاولات أكثر.` })
       : better === 'low' ? L({ en: `You found it faster than ${p}% of players.`, fr: `Tu as trouvé plus vite que ${p} % des joueurs.`, ar: `وجدتها أسرع من ${p}% من اللاعبين.` })
@@ -237,7 +238,7 @@ const GAMES = [
   { id: 'wilayadle', name: 'Wilayadle', ar: 'ولايدل', daily: true, d: { en: 'Guess the governorate: region, coast, borders, population, area… green, orange or red.', fr: 'Devine le gouvernorat : région, littoral, frontières, population, superficie… vert, orange ou rouge.', ar: 'خمّن الولاية: الإقليم، الساحل، الحدود، السكان، المساحة… أخضر أو برتقالي أو أحمر.' } },
   { id: 'persondle', name: 'Persondle', ar: 'شخصدل', daily: true, d: { en: 'Guess the Tunisian personality: field, birthplace, birth year… each column gets warmer.', fr: 'Devine la personnalité tunisienne : domaine, lieu et année de naissance… chaque colonne te guide.', ar: 'خمّن الشخصية التونسية: المجال، مكان وسنة الولادة… كل عمود يرشدك.' } },
   { id: 'chkoun', name: 'Chkoun?', ar: 'شكون؟', daily: true, d: { en: 'A mystery person or place. One clue to start, a new one after each wrong guess on the map.', fr: 'Une personne ou un lieu mystère. Un indice au départ, un nouveau après chaque erreur sur la carte.', ar: 'شخصية أو مكان غامض. تلميح واحد في البداية وآخر بعد كل خطأ على الخريطة.' } },
-  { id: 'ghouss', name: 'Ghouss', ar: 'غوص', daily: true, d: { en: 'Seven prompts a day. The more obscure your answer, the deeper you dive.', fr: 'Sept questions par jour. Plus ta réponse est rare, plus tu plonges profond.', ar: 'سبعة أسئلة يومياً. كلما كانت إجابتك أندر، غصت أعمق.' } },
+  { id: 'ghouss', name: 'Ghouss', ar: 'غوص', daily: true, d: { en: 'Seven prompts on Tunisian food, festivals and football. The rarer your answer among players, the deeper you dive.', fr: 'Sept questions sur la cuisine, les fêtes et le foot tunisiens. Plus ta réponse est rare, plus tu plonges.', ar: 'سبعة أسئلة عن الأكل والأعياد وكرة القدم في تونس. كلما كانت إجابتك أندر، غصت أعمق.' } },
   { id: 'tarikh', name: 'Tarikh', ar: 'تاريخ', daily: true, d: { en: 'Put Tunisian history in order, from Carthage to the Quartet, via Louis IX and the Hafsids.', fr: 'Remets l\'histoire de la Tunisie dans l\'ordre, de Carthage au Quartet, en passant par Saint Louis et les Hafsides.', ar: 'رتّب تاريخ تونس من قرطاج إلى الرباعي، مروراً بلويس التاسع والحفصيين.' } },
   { id: 'mnin', name: 'Mnin?', ar: 'منين؟', d: { en: 'Singers, clubs, dishes, monuments: tap where each one comes from.', fr: 'Chanteurs, clubs, plats, monuments : touche d\'où vient chacun.', ar: 'مطربون، نوادٍ، أطباق، معالم: اضغط على أصل كل واحد.' } },
   { id: 'blitz', name: 'Blitz', ar: 'بليتز', d: { en: 'Sixty seconds. Find as many governorates, or delegations, as you can.', fr: 'Soixante secondes. Trouve un max de gouvernorats ou de délégations.', ar: 'ستون ثانية. جد أكبر عدد من الولايات أو المعتمديات.' } },
@@ -437,61 +438,125 @@ function chkoun(day) {
 /* =========================================================
    GHOUSS — Krillion-style dive: rarer answers go deeper
    ========================================================= */
-const KEYWORDS = ['Sidi', 'Menzel', 'Bir', 'Ouled', 'Hammam', 'Ksar', 'Aïn', 'Bou', 'Jebel', 'El Ksour'];
-function ghoussPrompts(day) {
-  const r = rng('ghouss:' + day); const used = new Set();
-  const out = (DD(day).ghouss || []).filter(p => p.valid && p.valid.length).slice(0, 7).map((p, i) => ({ k: 'c' + i, kind: p.kind === 'gov' ? 'gov' : 'del', valid: p.valid.filter(id => G[id] || D[id]), txt: p['txt_' + LANG] || p.txt_fr || p.txt_en, isNew: true }));
-  const byPop = ids => ids.slice().sort((a, b) => ((G[b] || D[b]).p24 - (G[a] || D[a]).p24));
-  const gens = [
-    () => { const g = pick(GOVS.filter(g => DELS.filter(d => d.g === g.id).length >= 6), r); return { k: 'dg' + g.id, kind: 'del', valid: DELS.filter(d => d.g === g.id).map(d => d.id), txt: L({ en: `A delegation of ${g.en}`, fr: `Une délégation de ${g.fr}`, ar: `معتمدية من ولاية ${g.ar}` }) }; },
-    () => { const g = pick(GOVS.filter(g => g.nb.length >= 3), r); return { k: 'nb' + g.id, kind: 'gov', valid: g.nb, txt: L({ en: `A governorate bordering ${g.en}`, fr: `Un gouvernorat voisin de ${g.fr}`, ar: `ولاية مجاورة لـ${g.ar}` }) }; },
-    () => { const rg = pick(TN.regions.filter(x => x.govs.length >= 3), r); return { k: 'rg' + rg.id, kind: 'gov', valid: rg.govs, txt: L({ en: `A governorate of the ${rg.en} region`, fr: `Un gouvernorat de la région ${rg.fr}`, ar: `ولاية من إقليم ${rg.ar}` }) }; },
-    () => { const counts = {}; DELS.forEach(d => { const c = norm(d.fr)[0]; (counts[c] = counts[c] || []).push(d.id); }); const c = pick(Object.keys(counts).filter(c => /[a-z]/.test(c) && counts[c].length >= 6), r); return { k: 'lt' + c, kind: 'del', valid: counts[c], txt: L({ en: `A delegation starting with “${c.toUpperCase()}”`, fr: `Une délégation qui commence par « ${c.toUpperCase()} »`, ar: `معتمدية يبدأ اسمها اللاتيني بحرف ${c.toUpperCase()}` }) }; },
-    () => { const w = pick(KEYWORDS.filter(w => DELS.filter(d => norm(d.fr).split(' ').includes(norm(w))).length >= 3), r); return { k: 'kw' + w, kind: 'del', valid: DELS.filter(d => norm(d.fr).split(' ').includes(norm(w))).map(d => d.id), txt: L({ en: `A delegation with “${w}” in its name`, fr: `Une délégation avec « ${w} » dans son nom`, ar: `معتمدية في اسمها كلمة «${w}»` }) }; },
-    () => { const d = pick(DELS.filter(d => d.nb.length >= 4 && d.p24 > 60000), r); return { k: 'dn' + d.id, kind: 'del', valid: d.nb, txt: L({ en: `A delegation bordering ${d.en} (${G[d.g].en})`, fr: `Une délégation voisine de ${d.fr} (${G[d.g].fr})`, ar: `معتمدية مجاورة لـ${d.ar} (${G[d.g].ar})` }) }; },
-    () => { const th = pick([300000, 400000, 500000], r); return { k: 'pp' + th, kind: 'gov', valid: GOVS.filter(g => g.p24 > th).map(g => g.id), txt: L({ en: `A governorate with more than ${fmt(th)} people (2024)`, fr: `Un gouvernorat de plus de ${fmt(th)} habitants (2024)`, ar: `ولاية يفوق عدد سكانها ${fmt(th)} (2024)` }) }; },
-    () => { const g = pick(GOVS.filter(g => DELS.filter(d => d.g === g.id).length >= 9), r); return { k: 'dg' + g.id, kind: 'del', valid: DELS.filter(d => d.g === g.id).map(d => d.id), txt: L({ en: `A delegation of ${g.en}`, fr: `Une délégation de ${g.fr}`, ar: `معتمدية من ولاية ${g.ar}` }) }; }
-  ];
-  let guard = 0;
-  while (out.length < 7 && guard++ < 200) { const p = pick(gens, r)(); if (used.has(p.k)) continue; used.add(p.k); p.order = byPop(p.valid); out.push(p); }
-  return out;
+const GH = (window.GHOUSS || []).slice();
+PAST.forEach(k => (DAILY[k].ghouss_items || []).forEach(it => { if (it && it.id && !GH.some(x => x.id === it.id)) GH.push(Object.assign({ alt: [], tags: [], t: 2 }, it)); }));
+const GHB = Object.fromEntries(GH.map(x => [x.id, x]));
+const ghName = x => (LANG === 'ar' && x.ar) ? x.ar : LANG === 'en' ? x.en : x.fr;
+const surname = x => { const w = x.fr.replace(/\(.*\)/, '').trim().split(' '); return w[w.length - 1]; };
+const GHIDX = GH.map(x => ({ id: x.id, k: [...new Set([x.fr, x.en, x.ar, ...(x.alt || []), ...(x.cat === 'player' ? [surname(x)] : [])].filter(Boolean).flatMap(keys))] }));
+// returns { ids, sure } — sure=false means "did you mean"
+function ghMatch(input) {
+  const ik = keys(input); if (!ik.length || !ik[0]) return { ids: [], sure: false };
+  const exact = GHIDX.filter(e => e.k.some(k => ik.includes(k))).map(e => e.id); if (exact.length) return { ids: exact, sure: true };
+  const iw = ik[0].split(' ').filter(w => w.length >= 3);
+  if (iw.length) { const wd = GHIDX.filter(e => e.k.some(k => { const kw = k.split(' '); return iw.every(w => kw.includes(w)); })).map(e => e.id); if (wd.length === 1) return { ids: wd, sure: true }; if (wd.length > 1) return { ids: wd, sure: false }; }
+  const c = ik[1] || ik[0]; let best = 99, out = [];
+  GHIDX.forEach(e => e.k.forEach(k => { const d = lev(c, k.replace(/ /g, '')); if (d < best) { best = d; out = [e.id]; } else if (d === best && !out.includes(e.id)) out.push(e.id); }));
+  const tol = Math.max(1, Math.round(c.length * 0.34));
+  return best <= tol ? { ids: out.slice(0, 3), sure: false } : { ids: [], sure: false };
 }
-function depthOf(p, id) { const i = p.order.indexOf(id); if (i < 0) return 0; const n = p.order.length; return n === 1 ? 50 : Math.round(10 + 90 * i / (n - 1)); }
+const GQ = {
+  'food-any': { f: x => x.cat === 'food', txt: { en: 'A traditional Tunisian dish, sweet or drink', fr: 'Un plat, une douceur ou une boisson traditionnelle tunisienne', ar: 'أكلة أو حلوى أو مشروب تقليدي تونسي' } },
+  'food-sweet': { f: x => x.cat === 'food' && x.tags.includes('sweet'), txt: { en: 'A Tunisian sweet or pastry', fr: 'Une douceur ou pâtisserie tunisienne', ar: 'حلوى أو مرطبات تونسية' } },
+  'food-soup': { f: x => x.cat === 'food' && x.tags.includes('soup'), txt: { en: 'A Tunisian soup or stew', fr: 'Une soupe ou un plat en sauce tunisien', ar: 'شربة أو مرق تونسي' } },
+  'food-street': { f: x => x.cat === 'food' && x.tags.includes('street'), txt: { en: 'A Tunisian street food', fr: 'Un street food tunisien', ar: 'أكلة شارع تونسية' } },
+  'food-main': { f: x => x.cat === 'food' && x.tags.includes('main'), txt: { en: 'A Tunisian main dish', fr: 'Un plat principal tunisien', ar: 'طبق رئيسي تونسي' } },
+  'ev-festival': { f: x => x.cat === 'event' && x.tags.includes('festival'), txt: { en: 'A Tunisian festival', fr: 'Un festival tunisien', ar: 'مهرجان تونسي' } },
+  'ev-holiday': { f: x => x.cat === 'event' && x.tags.includes('holiday'), txt: { en: 'A public holiday in Tunisia', fr: 'Un jour férié en Tunisie', ar: 'عطلة رسمية في تونس' } },
+  'ev-any': { f: x => x.cat === 'event', txt: { en: 'A Tunisian festival, holiday or tradition', fr: 'Un festival, une fête ou une tradition en Tunisie', ar: 'مهرجان أو عيد أو تقليد في تونس' } },
+  'club-any': { f: x => x.cat === 'club', txt: { en: 'A Tunisian football club', fr: 'Un club de foot tunisien', ar: 'نادي كرة قدم تونسي' } },
+  'club-out': { f: x => x.cat === 'club' && !['c-est', 'c-ca', 'c-st', 'c-asm', 'c-cshl', 'c-jso', 'c-asa'].includes(x.id), txt: { en: 'A Tunisian football club from outside Greater Tunis', fr: 'Un club de foot tunisien hors du Grand Tunis', ar: 'نادي كرة قدم تونسي من خارج تونس الكبرى' } },
+  'pl-any': { f: x => x.cat === 'player', txt: { en: 'A footballer who played for Tunisia', fr: 'Un joueur de l\'équipe de Tunisie de foot', ar: 'لاعب كرة قدم دولي تونسي' } },
+  'pl-gk': { f: x => x.cat === 'player' && x.tags.includes('gk'), txt: { en: 'A Tunisia national team goalkeeper', fr: 'Un gardien de l\'équipe de Tunisie', ar: 'حارس مرمى للمنتخب التونسي' } },
+  'pl-df': { f: x => x.cat === 'player' && x.tags.includes('df'), txt: { en: 'A Tunisia national team defender', fr: 'Un défenseur de l\'équipe de Tunisie', ar: 'مدافع في المنتخب التونسي' } },
+  'pl-mf': { f: x => x.cat === 'player' && x.tags.includes('mf'), txt: { en: 'A Tunisia national team midfielder', fr: 'Un milieu de terrain de l\'équipe de Tunisie', ar: 'لاعب وسط في المنتخب التونسي' } },
+  'pl-fw': { f: x => x.cat === 'player' && x.tags.includes('fw'), txt: { en: 'A Tunisia national team striker', fr: 'Un attaquant de l\'équipe de Tunisie', ar: 'مهاجم في المنتخب التونسي' } }
+};
+function ghoussPrompts(day) {
+  const r = rng('ghouss2:' + day); const out = [];
+  (DD(day).ghouss || []).map(p => Object.assign({}, p, { valid: (p.valid || []).filter(id => GHB[id]) })).filter(p => p.valid.length >= 2).slice(0, 3).forEach((p, i) => out.push({ k: 'c' + i, valid: p.valid, txt: p['txt_' + LANG] || p.txt_fr || p.txt_en, isNew: true }));
+  const used = new Set(), groups = [['food-any', 'food-sweet', 'food-soup', 'food-street', 'food-main'], ['pl-any', 'pl-gk', 'pl-df', 'pl-mf', 'pl-fw'], ['ev-festival', 'ev-holiday', 'ev-any'], ['club-any', 'club-out']];
+  const add = k => { if (used.has(k)) return false; const q = GQ[k]; const valid = GH.filter(q.f).map(x => x.id); if (valid.length < 4) return false; used.add(k); out.push({ k, valid, txt: L(q.txt) }); return true; };
+  // surname letter prompt for players
+  const letters = {}; GH.filter(x => x.cat === 'player').forEach(x => { const c = norm(surname(x))[0]; (letters[c] = letters[c] || []).push(x.id); });
+  const order = [0, 1, 2, 3, 0, 1, 2]; let g = 0, guard = 0;
+  while (out.length < 7 && guard++ < 100) {
+    const grp = groups[order[g % order.length]]; g++;
+    if (grp[0] === 'pl-any' && r() < 0.3) { const c = pick(Object.keys(letters).filter(c => /[a-z]/.test(c) && letters[c].length >= 5), r); const k = 'pl-l' + c; if (!used.has(k)) { used.add(k); out.push({ k, valid: letters[c], txt: L({ en: `A Tunisia international whose surname starts with “${c.toUpperCase()}”`, fr: `Un international tunisien dont le nom commence par « ${c.toUpperCase()} »`, ar: `دولي تونسي يبدأ لقبه بحرف ${c.toUpperCase()}` }) }); continue; } }
+    add(pick(grp, r));
+  }
+  return out.slice(0, 7);
+}
+const PRIOR = { 1: 20, 2: 50, 3: 82 };
+async function ghAnswer(day, k, a) {
+  try { const ctl = new AbortController(); setTimeout(() => ctl.abort(), 3500);
+    const r = await fetch(STATS_URL, { method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: 'gh-ans', day: String(day), k, a, pid: PID }) });
+    if (!r.ok) return null; return await r.json(); } catch (e) { return null; }
+}
+function depthFrom(item, crowd) {
+  const prior = PRIOR[item.t] || 50;
+  if (!crowd || !crowd.n) return { depth: prior, share: null };
+  const share = crowd.c / crowd.n, crowdD = 10 + 90 * (1 - Math.min(1, share / 0.3)), w = Math.min(1, (crowd.n - 1) / 30);
+  return { depth: Math.round(w * crowdD + (1 - w) * prior), share: crowd.n >= 5 ? share : null };
+}
 function ghouss(day) {
   day = Math.min(Math.max(1, day || TODAY), TODAY);
-  const key = 'ghouss:' + day;
+  const key = 'ghouss2:' + day;
   const P = ghoussPrompts(day);
-  let st = LS.get(key + ':state', { ans: [] }); // [{id, depth}|null]
-  const body = shell('ghouss', 'Ghouss', 'غوص', L({ en: 'Seven prompts. Common answers stay near the surface, rare ones (smaller populations) take you deeper.', fr: 'Sept questions. Les réponses courantes restent en surface, les rares (moins peuplées) t\'emmènent au fond.', ar: 'سبعة أسئلة. الإجابات الشائعة تبقى قرب السطح، والنادرة (الأقل سكاناً) تأخذك إلى العمق.' }), `
+  let st = LS.get(key + ':state', { ans: [] });
+  const body = shell('ghouss', 'Ghouss', 'غوص', L({ en: 'Seven prompts about Tunisian food, festivals and football. Answers that few players give take you deeper.', fr: 'Sept questions sur la cuisine, les fêtes et le foot tunisiens. Plus ta réponse est rare chez les joueurs, plus tu plonges.', ar: 'سبعة أسئلة عن الأكل والأعياد وكرة القدم في تونس. كلما كانت إجابتك نادرة بين اللاعبين، غصت أعمق.' }), `
     ${dayPicker('ghouss', day, TODAY)}
-    <div class="dive"><div class="gauge"><div class="water"></div><div class="diver"></div><span class="gm"></span></div><div class="dive-main"><div class="prompt"></div><div class="inbox"></div><ol class="log"></ol><div class="after"></div></div></div>`);
-  const pr = $('.prompt', body), inbox = $('.inbox', body), log = $('.log', body), after = $('.after', body);
+    <div class="dive"><div class="gauge"><div class="water"></div><div class="diver"></div><span class="gm"></span></div><div class="dive-main"><div class="prompt"></div><div class="inbox"></div><div class="dym" hidden></div><ol class="log"></ol><div class="after"></div></div></div>`);
+  const pr = $('.prompt', body), inbox = $('.inbox', body), log = $('.log', body), after = $('.after', body), dym = $('.dym', body);
   const total = () => st.ans.reduce((s, a) => s + (a ? a.depth : 0), 0);
   const save = () => LS.set(key + ':state', st);
+  let busy = false;
   function draw() {
     const i = st.ans.length, tot = total();
-    $('.diver', body).style.setProperty('--d', Math.min(1, tot / 700));
+    $('.diver', body).style.setProperty('--d', Math.min(1, tot / 600));
     $('.gm', body).textContent = tot + ' m';
-    log.innerHTML = st.ans.map((a, k) => `<li class="${a ? 'ok' : 'miss'}"><span class="lp">${esc(P[k].txt)}</span><span class="la">${a ? esc(nm(G[a.id] || D[a.id])) : '—'}</span><b>${a ? a.depth : 0} m</b></li>`).join('');
+    log.innerHTML = st.ans.map((a, k) => `<li class="${a ? 'ok' : 'miss'}"><span class="lp">${esc(P[k].txt)}</span><span class="la">${a ? esc(ghName(GHB[a.id])) : '—'}${a && a.share != null ? `<small>${Math.round(a.share * 100)}% ${L({ en: 'of players', fr: 'des joueurs', ar: 'من اللاعبين' })}</small>` : ''}</span><b>${a ? a.depth : 0} m</b></li>`).join('');
+    dym.hidden = true;
     if (i >= P.length) { pr.innerHTML = ''; inbox.innerHTML = ''; end(); return; }
     pr.innerHTML = `<p class="pn">${i + 1}/7${P[i].isNew ? ` <span class="chip new">${t('newT')}</span>` : ''}</p><h2>${esc(P[i].txt)}</h2>`;
-    const inp = acInputPlain(inbox, v => {
-      const p = P[i]; const idx = p.kind === 'gov' ? GIDX : DIDX;
-      const m = matchAll(v, idx); if (!m.length) { toast(t('notPlace'), 'bad'); return false; }
-      const hit = p.order.find(id => m.includes(id)); // if ambiguous, take the most common (shallowest) valid match
-      if (hit) { const dep = depthOf(p, hit); st.ans.push({ id: hit, depth: dep }); toast(`${nm(G[hit] || D[hit])} · ${dep} m`, 'good'); }
-      else { st.ans.push(null); toast(t('notValid'), 'bad'); }
-      if (st.ans.length >= P.length && day === TODAY) LS.set('ghouss:' + TODAY, true);
-      const best = LS.get('ghouss:best', 0); if (st.ans.length >= P.length && total() > best) LS.set('ghouss:best', total());
-      save(); draw();
-    }, () => { st.ans.push(null); save(); draw(); });
+    const inp = acInputPlain(inbox, v => submit(v), () => { if (busy) return; st.ans.push(null); save(); fin(); draw(); });
     inp.focus({ preventScroll: true });
   }
+  function suggest(ids, msg) {
+    dym.hidden = false;
+    dym.innerHTML = `${msg ? `<span>${esc(msg)}</span> ` : ''}${ids.length ? `${L({ en: 'Did you mean', fr: 'Tu voulais dire', ar: 'هل تقصد' })} ${ids.map(id => `<button class="sug" data-sug="${id}">${esc(ghName(GHB[id]))}</button>`).join(` ${L({ en: 'or', fr: 'ou', ar: 'أو' })} `)} ?` : ''}`;
+    $$('[data-sug]', dym).forEach(b => b.onclick = () => accept(b.dataset.sug));
+  }
+  function submit(v) {
+    if (busy) return false;
+    const p = P[st.ans.length]; const m = ghMatch(v);
+    if (!m.ids.length) { suggest([], L({ en: 'Not in our list. Check the spelling or try another answer.', fr: 'Pas dans notre liste. Vérifie l\'orthographe ou essaie autre chose.', ar: 'غير موجود في قائمتنا. تحقّق من الكتابة أو جرّب إجابة أخرى.' })); return false; }
+    const valid = m.ids.filter(id => p.valid.includes(id));
+    if (m.sure && valid.length) { accept(valid[0]); return true; }
+    if (!m.sure) { const ids = (valid.length ? valid : m.ids).slice(0, 3); suggest(ids, ''); return false; }
+    suggest([], L({ en: `“${ghName(GHB[m.ids[0]])}” doesn't fit this prompt. Try another answer.`, fr: `« ${ghName(GHB[m.ids[0]])} » ne correspond pas à cette question. Essaie autre chose.`, ar: `«${ghName(GHB[m.ids[0]])}» لا يناسب هذا السؤال. جرّب إجابة أخرى.` }));
+    return false;
+  }
+  async function accept(id) {
+    const i = st.ans.length, p = P[i];
+    if (!p.valid.includes(id)) { suggest([], L({ en: `“${ghName(GHB[id])}” doesn't fit this prompt. Try another answer.`, fr: `« ${ghName(GHB[id])} » ne correspond pas à cette question. Essaie autre chose.`, ar: `«${ghName(GHB[id])}» لا يناسب هذا السؤال. جرّب إجابة أخرى.` })); return; }
+    if (busy) return; busy = true; dym.hidden = true;
+    const crowd = await ghAnswer(day, i, id);
+    const { depth, share } = depthFrom(GHB[id], crowd);
+    st.ans.push({ id, depth, share }); busy = false;
+    toast(`${ghName(GHB[id])} · ${depth} m`, 'good'); save(); fin(); draw();
+  }
+  function fin() {
+    if (st.ans.length < P.length) return;
+    if (day === TODAY) LS.set('ghouss:' + TODAY, true);
+    if (total() > LS.get('ghouss:best', 0)) LS.set('ghouss:best', total());
+  }
   function end() {
+    if (after.dataset.done) return; after.dataset.done = 1;
     const tot = total(); const bars = '▁▂▃▄▅▆▇█';
     const sh = shareBtn(() => `🤿 Ghouss #${day} · ${tot} m\n${st.ans.map(a => a ? bars[Math.min(7, Math.floor(a.depth / 12.6))] : '·').join('')}\n${link('ghouss-' + day)}`);
     after.innerHTML = `<div class="result win"><p class="rt">${t('depth')}</p><h2>${tot} m</h2><div class="gstats" hidden></div></div>
-      <details class="deep"><summary>${t('deepest')}</summary><ul>${P.map(p => { const id = p.order[p.order.length - 1]; return `<li><span>${esc(p.txt)}</span><b>${esc(nm(G[id] || D[id]))}</b></li>`; }).join('')}</ul></details>
+      <details class="deep"><summary>${L({ en: 'Rare answers you could have given', fr: 'Des réponses rares possibles', ar: 'إجابات نادرة كان يمكنك قولها' })}</summary><ul>${P.map(p => { const rare = p.valid.map(id => GHB[id]).filter(x => x.t === 3).slice(0, 3); return `<li><span>${esc(p.txt)}</span><b>${esc((rare.length ? rare : p.valid.slice(-2).map(id => GHB[id])).map(ghName).join(', '))}</b></li>`; }).join('')}</ul></details>
       <div class="actions">${sh.html}</div>`;
     sh.bind(after); statBlock($('.gstats', after), 'ghouss', day, tot, 'high');
   }
