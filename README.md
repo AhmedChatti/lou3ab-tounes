@@ -1,6 +1,8 @@
 # Lou3ab Tounes · لعب تونس
 
-Eight trivia games about Tunisia, in French, English and Arabic.
+Trivia games about Tunisia, in French, English and Arabic.
+
+**Live: https://lou3ab-tounes.vercel.app** (Vercel redeploys on every push to `main`).
 
 | Game | Type | What you do |
 |---|---|---|
