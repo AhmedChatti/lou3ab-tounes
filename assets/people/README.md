@@ -51,5 +51,6 @@ Only use images you have the right to use (your own photos, or images whose lice
 | Marwa Amri (مروى العامري) | `marwa-amri.jpg` |
 | Mohamed Zran (محمد زرن) | `mohamed-zran.jpg` |
 | Kaouther Ben Hania (كوثر بن هنية) | `kaouther-ben-hania.jpg` |
+| Zoubeida Bchir (زبيدة بشير) | `zoubeida-bchir.jpg` |
 
 People added later by the nightly task follow the same rule: file name = name in lowercase, accents removed, spaces → hyphens.

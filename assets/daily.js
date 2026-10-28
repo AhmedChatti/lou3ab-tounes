@@ -263,5 +263,332 @@ window.DAILY = {
     }
    ]
   }
+ },
+ "2026-10-29": {
+  "wilayadle": {
+   "g": "TN-83",
+   "fact_en": "A sauropod dinosaur described in 2013, Tataouinea hannibalis, is named after the Tataouine region.",
+   "fact_fr": "Un dinosaure sauropode décrit en 2013, Tataouinea hannibalis, porte le nom de la région de Tataouine.",
+   "fact_ar": "يحمل ديناصور صوروبودي وُصف سنة 2013، تطاوينيا هانيباليس، اسم منطقة تطاوين."
+  },
+  "persondle": {
+   "name": "Zoubeida Bchir",
+   "ar": "زبيدة بشير",
+   "sex": "F",
+   "field": "literature",
+   "g": "TN-33",
+   "y": 1938,
+   "alive": false,
+   "k_en": "Pioneer poet, first collection “Hanîn” (1968)",
+   "k_fr": "Poétesse pionnière, recueil « Hanîn » (1968)",
+   "k_ar": "شاعرة رائدة، ديوان «حنين» (1968)"
+  },
+  "chkoun": {
+   "g": "TN-32",
+   "name": "Chemtou",
+   "kind": "place",
+   "clues_en": [
+    "Ruins of an ancient town first founded under the Numidian kingdom.",
+    "The Romans called it Simitthus.",
+    "Its quarries sent a prized yellow marble, giallo antico, to Rome.",
+    "Its Roman bridge over a river was rebuilt under Trajan in 112 AD.",
+    "On the Medjerda, about 20 km from Jendouba, near the Algerian border."
+   ],
+   "clues_fr": [
+    "Ruines d’une ville antique fondée sous le royaume numide.",
+    "Les Romains l’appelaient Simitthus.",
+    "Ses carrières envoyaient à Rome un marbre jaune prisé, le giallo antico.",
+    "Son pont romain a été reconstruit sous Trajan en 112 apr. J.-C.",
+    "Sur la Medjerda, à environ 20 km de Jendouba, près de la frontière algérienne."
+   ],
+   "clues_ar": [
+    "أطلال مدينة قديمة تأسّست في عهد المملكة النوميدية.",
+    "سمّاها الرومان سيميتوس.",
+    "كانت مقاطعها تُرسل إلى روما رخامًا أصفر نفيسًا.",
+    "أُعيد بناء جسرها الروماني في عهد تراجان سنة 112 م.",
+    "على وادي مجردة، على بعد نحو 20 كم من جندوبة، قرب الحدود الجزائرية."
+   ],
+   "born_en": "In the governorate of Jendouba",
+   "born_fr": "Dans le gouvernorat de Jendouba",
+   "born_ar": "في ولاية جندوبة"
+  },
+  "ghouss_items": [
+   {
+    "id": "p-ben-cherifia",
+    "cat": "player",
+    "fr": "Moez Ben Cherifia",
+    "en": "Moez Ben Cherifia",
+    "ar": "",
+    "t": 2,
+    "tags": [
+     "gk"
+    ],
+    "alt": [
+     "ben cherifia",
+     "ben chrifia",
+     "moez ben chrifia",
+     "ben cherifa"
+    ]
+   },
+   {
+    "id": "p-naili",
+    "cat": "player",
+    "fr": "Mokhtar Naili",
+    "en": "Mokhtar Naili",
+    "ar": "",
+    "t": 3,
+    "tags": [
+     "gk"
+    ],
+    "alt": [
+     "naili",
+     "mokhtar nayli",
+     "nayli"
+    ]
+   },
+   {
+    "id": "p-nefzi",
+    "cat": "player",
+    "fr": "Adel Nefzi",
+    "en": "Adel Nefzi",
+    "ar": "",
+    "t": 3,
+    "tags": [
+     "gk"
+    ],
+    "alt": [
+     "nefzi"
+    ]
+   },
+   {
+    "id": "p-azaiez",
+    "cat": "player",
+    "fr": "Khaled Azaiez",
+    "en": "Khaled Azaiez",
+    "ar": "",
+    "t": 3,
+    "tags": [
+     "gk"
+    ],
+    "alt": [
+     "azaiez",
+     "azaiz",
+     "khaled azaiz"
+    ]
+   }
+  ],
+  "ghouss": [
+   {
+    "txt_en": "A goalkeeper who played for Tunisia’s national team",
+    "txt_fr": "Un gardien de but passé par l’équipe de Tunisie",
+    "txt_ar": "حارس مرمى لعب مع المنتخب التونسي",
+    "valid": [
+     "p-attouga",
+     "p-el-ouaer",
+     "p-boumnijel",
+     "p-mathlouthi-a",
+     "p-ben-mustapha",
+     "p-hassen",
+     "p-ben-said",
+     "p-dahmen",
+     "p-kasraoui",
+     "p-jridi",
+     "p-ben-cherifia",
+     "p-naili",
+     "p-nefzi",
+     "p-azaiez"
+    ]
+   }
+  ],
+  "tarikh": [
+   {
+    "y": 1160,
+    "g": "TN-53",
+    "en": "The Almohads take Mahdia from the Normans",
+    "fr": "Les Almohades reprennent Mahdia aux Normands",
+    "ar": "الموحّدون يستعيدون المهدية من النورمان",
+    "d_en": "After a seven-month siege, Caliph Abd al-Mu'min forces the Sicilian garrison to surrender, ending Norman rule in Africa.",
+    "d_fr": "Après un siège de sept mois, le calife Abd al-Mumin obtient la reddition de la garnison sicilienne : fin de l’Afrique normande.",
+    "d_ar": "بعد حصار دام سبعة أشهر، أجبر الخليفة عبد المؤمن الحامية الصقلية على الاستسلام، فانتهى حكم النورمان في إفريقية."
+   },
+   {
+    "y": 1906,
+    "g": "TN-42",
+    "en": "The Thala–Kasserine uprising",
+    "fr": "L’insurrection de Thala-Kasserine",
+    "ar": "انتفاضة تالة والقصرين",
+    "d_en": "On 26–27 April, Frechich insurgents led by the marabout Amor Ben Othman attack settler farms, then the French post at Thala.",
+    "d_fr": "Les 26 et 27 avril, des insurgés Frachiches menés par le marabout Amor Ben Othman attaquent des fermes de colons puis Thala.",
+    "d_ar": "يومي 26 و27 أفريل، هاجم ثوار من الفراشيش بقيادة المرابط عمر بن عثمان ضيعات المعمّرين ثم المركز الفرنسي بتالة."
+   }
+  ],
+  "mnin": [
+   {
+    "g": [
+     "TN-11"
+    ],
+    "cat": "place",
+    "en": "The Acropolium",
+    "fr": "L’Acropolium",
+    "ar": "الأكروبوليوم",
+    "sub_en": "Former Saint-Louis cathedral",
+    "sub_fr": "Ancienne cathédrale Saint-Louis",
+    "sub_ar": "كاتدرائية القديس لويس سابقًا",
+    "why_en": "Built 1884–1890 on Byrsa hill in Carthage, dedicated to Louis IX, who died nearby in 1270.",
+    "why_fr": "Construite de 1884 à 1890 sur la colline de Byrsa à Carthage, dédiée à Louis IX, mort tout près en 1270.",
+    "why_ar": "شُيّدت بين 1884 و1890 على هضبة بيرصا بقرطاج، وأُهديت إلى لويس التاسع الذي توفّي قربها سنة 1270."
+   },
+   {
+    "g": [
+     "TN-31"
+    ],
+    "cat": "sport",
+    "en": "Olympique de Béja",
+    "fr": "Olympique de Béja",
+    "ar": "الأولمبي الباجي",
+    "sub_en": "Football club founded in 1929",
+    "sub_fr": "Club de football fondé en 1929",
+    "sub_ar": "نادي كرة قدم تأسّس سنة 1929",
+    "why_en": "Béja’s club has won the Tunisian Cup three times: 1993, 2010 and 2023.",
+    "why_fr": "Le club de Béja a remporté la Coupe de Tunisie trois fois : 1993, 2010 et 2023.",
+    "why_ar": "فاز نادي باجة بكأس تونس ثلاث مرات: 1993 و2010 و2023."
+   },
+   {
+    "g": [
+     "TN-21"
+    ],
+    "cat": "food",
+    "en": "The Maltese orange",
+    "fr": "L’orange maltaise",
+    "ar": "البرتقال المالطي",
+    "sub_en": "Tunisia’s prized blood orange",
+    "sub_fr": "L’orange sanguine phare de la Tunisie",
+    "sub_ar": "أشهر برتقال دموي في تونس",
+    "why_en": "Grown mostly on Cap Bon, which produces over 75% of Tunisia’s citrus fruit.",
+    "why_fr": "Cultivée surtout au Cap Bon, qui produit plus de 75 % des agrumes tunisiens.",
+    "why_ar": "تُزرع أساسًا في الوطن القبلي الذي ينتج أكثر من 75% من القوارص التونسية."
+   }
+  ],
+  "akthar": {
+   "lab_en": "Population · governorates (2024 census)",
+   "lab_fr": "Population · gouvernorats (recensement 2024)",
+   "lab_ar": "عدد السكان · الولايات (تعداد 2024)",
+   "unit": "hab.",
+   "source": "INS, recensement général de la population 2024 (via citypopulation.de)",
+   "items": [
+    {
+     "en": "Tunis",
+     "fr": "Tunis",
+     "ar": "تونس",
+     "g": "TN-11",
+     "value": 1075306
+    },
+    {
+     "en": "Sfax",
+     "fr": "Sfax",
+     "ar": "صفاقس",
+     "g": "TN-61",
+     "value": 1047468
+    },
+    {
+     "en": "Nabeul",
+     "fr": "Nabeul",
+     "ar": "نابل",
+     "g": "TN-21",
+     "value": 863172
+    },
+    {
+     "en": "Sousse",
+     "fr": "Sousse",
+     "ar": "سوسة",
+     "g": "TN-51",
+     "value": 762281
+    },
+    {
+     "en": "Ben Arous",
+     "fr": "Ben Arous",
+     "ar": "بن عروس",
+     "g": "TN-13",
+     "value": 722828
+    },
+    {
+     "en": "Kairouan",
+     "fr": "Kairouan",
+     "ar": "القيروان",
+     "g": "TN-41",
+     "value": 600803
+    },
+    {
+     "en": "Monastir",
+     "fr": "Monastir",
+     "ar": "المنستير",
+     "g": "TN-52",
+     "value": 599769
+    },
+    {
+     "en": "Medenine",
+     "fr": "Médenine",
+     "ar": "مدنين",
+     "g": "TN-82",
+     "value": 537255
+    },
+    {
+     "en": "Kasserine",
+     "fr": "Kasserine",
+     "ar": "القصرين",
+     "g": "TN-42",
+     "value": 492741
+    },
+    {
+     "en": "Gabès",
+     "fr": "Gabès",
+     "ar": "قابس",
+     "g": "TN-81",
+     "value": 410847
+    },
+    {
+     "en": "Jendouba",
+     "fr": "Jendouba",
+     "ar": "جندوبة",
+     "g": "TN-32",
+     "value": 404352
+    },
+    {
+     "en": "Béja",
+     "fr": "Béja",
+     "ar": "باجة",
+     "g": "TN-31",
+     "value": 311417
+    },
+    {
+     "en": "Kef",
+     "fr": "Le Kef",
+     "ar": "الكاف",
+     "g": "TN-33",
+     "value": 237686
+    },
+    {
+     "en": "Siliana",
+     "fr": "Siliana",
+     "ar": "سليانة",
+     "g": "TN-34",
+     "value": 216242
+    },
+    {
+     "en": "Tataouine",
+     "fr": "Tataouine",
+     "ar": "تطاوين",
+     "g": "TN-83",
+     "value": 162654
+    },
+    {
+     "en": "Tozeur",
+     "fr": "Tozeur",
+     "ar": "توزر",
+     "g": "TN-72",
+     "value": 120036
+    }
+   ]
+  }
  }
 };
