@@ -146,6 +146,7 @@ function mapSVG(o = {}) {
       <g clip-path="url(#gtclip)"><g transform="translate(${X},${Y}) scale(${sc}) translate(${-(x0 - pad)},${-(y0 - pad)})" style="--sw:${0.6 / sc}">${GOVS.filter(g => g.bb[0] < x1 + 6 && g.bb[2] > x0 - 6 && g.bb[1] < y1 + 6 && g.bb[3] > y0 - 6).map(path).join('')}</g></g>
       <path class="inset-lead" d="M${x1 + 2},${(y0 + y1) / 2} L${X},${Y + H / 2}"/></g>`;
   }
+  s += `<text class="osm" x="${vb[0] + vb[2] - 3}" y="${vb[1] + vb[3] - 3}" text-anchor="end" style="font-size:${(vb[2] / 60).toFixed(2)}px">© OpenStreetMap</text>`;
   return s + '</svg>';
 }
 function setCls(root, id, cls, on = true) { $$(`[data-id="${id}"]`, root).forEach(p => p.classList.toggle(cls, on)); }
@@ -177,7 +178,7 @@ function shell(id, title, ar, sub, body) {
 function langSwitch() { return `<div class="seg" role="group" aria-label="Language">${['fr', 'en', 'ar'].map(l => `<button data-lang="${l}" class="${l === LANG ? 'on' : ''}">${l === 'ar' ? 'ع' : l.toUpperCase()}</button>`).join('')}</div>`; }
 function bindLang() { $$('[data-lang]').forEach(b => b.onclick = () => { LANG = b.dataset.lang; LS.set('lang', LANG); applyLang(); route(); }); }
 function applyLang() { document.documentElement.lang = LANG; document.documentElement.dir = LANG === 'ar' ? 'rtl' : 'ltr'; }
-function footer() { return `<footer class="foot"><p>${t('credit')}</p><p><a href="https://github.com/Alaa-Taieb/map-tunisia" target="_blank" rel="noopener">github.com/Alaa-Taieb/map-tunisia</a></p></footer>`; }
+function footer() { return `<footer class="foot"><p><a href="https://github.com/Alaa-Taieb/map-tunisia" target="_blank" rel="noopener">Map Tunisia</a> ${L({ en: 'by', fr: 'par', ar: 'لـ' })} <a href="https://github.com/Alaa-Taieb/map-tunisia" target="_blank" rel="noopener">Alaa Taieb</a></p></footer>`; }
 function dayPicker(game, day, max) { return `<div class="daypick"><a class="btn ghost sm ${day <= 1 ? 'dis' : ''}" href="#${game}-${day - 1}">‹</a><span>${t('puzzle')} #${day}</span><a class="btn ghost sm ${day >= max ? 'dis' : ''}" href="#${game}-${day + 1}">›</a></div>`; }
 function hearts(n, max) { return `<span class="hearts" aria-label="${n} lives">${'<i class="h on"></i>'.repeat(Math.max(0, n))}${'<i class="h"></i>'.repeat(Math.max(0, max - n))}</span>`; }
 
@@ -215,6 +216,21 @@ function statBlock(el, game, day, v, better, o = {}) {
   });
 }
 function liveCount(el, game, day, txt) { if (!el) return; statsGet(game, day).then(s => { if (s && s.n) { el.innerHTML = `🌍 <b>${nfmt(s.n)}</b> ${L(txt)}`; el.hidden = false; } }); }
+
+/* ---------- countdown to the next daily puzzle (local midnight) ---------- */
+function countdown(el) {
+  if (!el) return;
+  const two = n => String(n).padStart(2, '0');
+  const tick = () => {
+    if (!document.body.contains(el)) return clearInterval(id);
+    const now = new Date(), next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1), s = Math.max(0, Math.floor((next - now) / 1000));
+    el.innerHTML = `<span>${L({ en: 'Next puzzle in', fr: 'Prochaine grille dans', ar: 'اللغز القادم بعد' })}</span><b dir="ltr">${two(Math.floor(s / 3600))}:${two(Math.floor(s / 60) % 60)}:${two(s % 60)}</b>`;
+    if (s <= 0) { clearInterval(id); setTimeout(() => location.reload(), 1500); }
+  };
+  const id = setInterval(tick, 1000); tick();
+}
+const todayLink = (root, game) => $$('[data-today]', root).forEach(a => { a.href = '#' + game; a.onclick = null; });
+const cdHTML = day => day === TODAY ? '<div class="cd" role="timer"></div>' : `<p class="cd-old"><a href="#" onclick="return false" data-today>${L({ en: 'Play today\'s puzzle', fr: 'Jouer la grille du jour', ar: 'العب لغز اليوم' })}</a></p>`;
 
 /* ---------- autocomplete input ---------- */
 function acInput(root, list, onSubmit, placeholder) {
@@ -262,7 +278,13 @@ function home() {
   };
   app.innerHTML = `<header class="bar"><span class="brand">Lou3ab <span lang="ar">لعب</span></span><div class="bar-r">${langSwitch()}</div></header>
   <section class="hero">
-    <div class="hero-t"><h1>Lou3ab<br><span lang="ar">تونس</span></h1><p>${t('tagline')}</p><p class="day">${t('daily')} · ${t('puzzle')} #${TODAY}</p></div>
+    <div class="hero-t">
+      <span class="pill">${L({ en: '8 games · 3 languages', fr: '8 jeux · 3 langues', ar: '8 ألعاب · 3 لغات' })}</span>
+      <h1><span class="h-w">Lou3ab</span><span class="h-g">Tounes</span></h1>
+      <p class="h-ar" lang="ar" dir="rtl">لعب تونس</p>
+      <p class="h-d">${L({ en: 'Wilayadle, Persondle, Chkoun, Tarikh… daily games about Tunisia: governorates, personalities, history, food and football.', fr: 'Wilayadle, Persondle, Chkoun, Tarikh… des jeux quotidiens sur la Tunisie : gouvernorats, personnalités, histoire, cuisine et foot.', ar: 'ولايدل، شخصدل، شكون، تاريخ… ألعاب يومية عن تونس: الولايات والشخصيات والتاريخ والأكل وكرة القدم.' })}</p>
+      <div class="h-cta"><a class="btn gold" href="#wilayadle">${L({ en: 'Play today\'s Wilayadle', fr: 'Jouer au Wilayadle du jour', ar: 'العب ولايدل اليوم' })}</a><span class="day">${t('puzzle')} #${TODAY}</span></div>
+    </div>
     <div class="hero-m">${mapSVG({ level: 'gov' })}</div>
   </section>
   <section class="grid">${GAMES.map(g => `<a class="tile" href="#${g.id}">${thumbs[g.id]}<div class="tile-b"><h2>${g.name} <span lang="ar">${g.ar}</span></h2><p>${L(g.d)}</p><div class="tile-f">${g.daily ? `<span class="chip daily">${t('daily')}</span>` : `<span class="chip">${t('endless')}</span>`}${nw(g.id)}${st(g.id)}</div></div></a>`).join('')}</section>${footer()}`;
@@ -312,8 +334,8 @@ function dle(cfg) {
   function end() {
     if (after.dataset.done) return; after.dataset.done = 1;
     const sh = shareBtn(shareText);
-    after.innerHTML = `<div class="result win"><p class="rt">${t('won')} · ${st.guesses.length} ${L({ en: 'guesses', fr: 'essais', ar: 'محاولات' })}</p><h2>${esc(cfg.label(target))} <span lang="ar">${esc(cfg.alt(target))}</span></h2>${cfg.reveal(target, day)}<div class="gstats" hidden></div></div>${cfg.bonus ? '<div class="bonusbox"></div>' : ''}<div class="actions">${sh.html}</div>`;
-    statBlock($('.gstats', after), cfg.id, day, st.guesses.length, 'low', { bars: 8 });
+    after.innerHTML = `<div class="result win"><p class="rt">${t('won')} · ${st.guesses.length} ${L({ en: 'guesses', fr: 'essais', ar: 'محاولات' })}</p><h2>${esc(cfg.label(target))} <span lang="ar">${esc(cfg.alt(target))}</span></h2>${cfg.reveal(target, day)}<div class="gstats" hidden></div>${cdHTML(day)}</div>${cfg.bonus ? '<div class="bonusbox"></div>' : ''}<div class="actions">${sh.html}</div>`;
+    statBlock($('.gstats', after), cfg.id, day, st.guesses.length, 'low', { bars: 8 }); countdown($('.cd', after)); todayLink(after, cfg.id);
     sh.bind(after); if (cfg.bonus) cfg.bonus($('.bonusbox', after), target, st, save, () => $$('[data-share]', after).forEach(b => b.onclick = () => copy(shareText(), b)));
     after.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
@@ -429,8 +451,8 @@ function chkoun(day) {
   }
   function end() {
     const sh = shareBtn(() => `Chkoun? #${day} ${st.won ? st.guesses.length : 'X'}/${MAX}\n${st.guesses.map(id => id === M.g ? '🟩' : '🟥').join('')}${'⬜'.repeat(MAX - st.guesses.length)}\n${link('chkoun-' + day)}`);
-    after.innerHTML = `<div class="result ${st.won ? 'win' : 'lose'}"><p class="rt">${st.won ? t('won') : t('lost')}</p><h2>${esc(M.name)}</h2><p>${esc(M['born_' + LANG] || M.born_fr || M.born_en)} · ${esc(nm(G[M.g]))}</p><div class="gstats" hidden></div></div><div class="actions">${sh.html}</div>`;
-    sh.bind(after); statBlock($('.gstats', after), 'chkoun', day, st.won ? st.guesses.length : 6, 'low', { bars: 6, failAt: 6, failed: !st.won });
+    after.innerHTML = `<div class="result ${st.won ? 'win' : 'lose'}"><p class="rt">${st.won ? t('won') : t('lost')}</p><h2>${esc(M.name)}</h2><p>${esc(M['born_' + LANG] || M.born_fr || M.born_en)} · ${esc(nm(G[M.g]))}</p><div class="gstats" hidden></div>${cdHTML(day)}</div><div class="actions">${sh.html}</div>`;
+    sh.bind(after); statBlock($('.gstats', after), 'chkoun', day, st.won ? st.guesses.length : 6, 'low', { bars: 6, failAt: 6, failed: !st.won }); countdown($('.cd', after)); todayLink(after, 'chkoun');
   }
   draw();
 }
@@ -555,10 +577,10 @@ function ghouss(day) {
     if (after.dataset.done) return; after.dataset.done = 1;
     const tot = total(); const bars = '▁▂▃▄▅▆▇█';
     const sh = shareBtn(() => `🤿 Ghouss #${day} · ${tot} m\n${st.ans.map(a => a ? bars[Math.min(7, Math.floor(a.depth / 12.6))] : '·').join('')}\n${link('ghouss-' + day)}`);
-    after.innerHTML = `<div class="result win"><p class="rt">${t('depth')}</p><h2>${tot} m</h2><div class="gstats" hidden></div></div>
+    after.innerHTML = `<div class="result win"><p class="rt">${t('depth')}</p><h2>${tot} m</h2><div class="gstats" hidden></div>${cdHTML(day)}</div>
       <details class="deep"><summary>${L({ en: 'Rare answers you could have given', fr: 'Des réponses rares possibles', ar: 'إجابات نادرة كان يمكنك قولها' })}</summary><ul>${P.map(p => { const rare = p.valid.map(id => GHB[id]).filter(x => x.t === 3).slice(0, 3); return `<li><span>${esc(p.txt)}</span><b>${esc((rare.length ? rare : p.valid.slice(-2).map(id => GHB[id])).map(ghName).join(', '))}</b></li>`; }).join('')}</ul></details>
       <div class="actions">${sh.html}</div>`;
-    sh.bind(after); statBlock($('.gstats', after), 'ghouss', day, tot, 'high');
+    sh.bind(after); statBlock($('.gstats', after), 'ghouss', day, tot, 'high'); countdown($('.cd', after)); todayLink(after, 'ghouss');
   }
   draw();
 }
@@ -616,8 +638,8 @@ function tarikh(arg) {
   function end() {
     const s = st.marks.filter(Boolean).length;
     const sh = shareBtn(() => `📜 Tarikh ${mode === 'daily' ? '#' + day : '∞'} · ${s}${mode === 'daily' ? '/' + (N - 1) : ''}\n${st.marks.map(m => m ? '🟩' : '🟥').join('')}\n${link(mode === 'daily' ? 'tarikh-' + day : 'tarikh-endless')}`);
-    after.innerHTML = `<div class="result ${st.lives > 0 ? 'win' : 'lose'}"><p class="rt">${t('score')}</p><h2>${s}${mode === 'daily' ? ' / ' + (N - 1) : ''}</h2><div class="gstats" hidden></div></div><div class="actions">${sh.html}${mode === 'endless' ? `<button class="btn" id="tk-again">${t('again')}</button>` : ''}</div>`;
-    sh.bind(after); if (mode === 'endless') $('#tk-again').onclick = () => tarikh('endless'); else statBlock($('.gstats', after), 'tarikh', day, s, 'high');
+    after.innerHTML = `<div class="result ${st.lives > 0 ? 'win' : 'lose'}"><p class="rt">${t('score')}</p><h2>${s}${mode === 'daily' ? ' / ' + (N - 1) : ''}</h2><div class="gstats" hidden></div>${mode === 'daily' ? cdHTML(day) : ''}</div><div class="actions">${sh.html}${mode === 'endless' ? `<button class="btn" id="tk-again">${t('again')}</button>` : ''}</div>`;
+    sh.bind(after); if (mode === 'endless') $('#tk-again').onclick = () => tarikh('endless'); else { statBlock($('.gstats', after), 'tarikh', day, s, 'high'); countdown($('.cd', after)); todayLink(after, 'tarikh'); }
   }
   draw();
 }
