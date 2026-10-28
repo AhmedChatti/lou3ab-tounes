@@ -314,8 +314,8 @@ const LEG = { ok: { en: 'Correct', fr: 'Correct', ar: 'صحيح' }, part: { en: 
 function dle(cfg) {
   const day = Math.min(Math.max(1, cfg.day || TODAY), TODAY);
   const target = cfg.target(day); const key = cfg.id + ':' + day;
-  let st = LS.get(key + ':state', { guesses: [], done: false, bonus: null });
-  if (st.guesses.some(id => !cfg.byId(id))) st = { guesses: [], done: false, bonus: null };
+  let st = LS.get(key + ':state', null);
+  if (!st || st.t !== target.id || st.guesses.some(id => !cfg.byId(id))) st = { t: target.id, guesses: [], done: false, bonus: null };
   const body = shell(cfg.id, cfg.title, cfg.ar, L(cfg.sub), `
     ${dayPicker(cfg.id, day, TODAY)}
     <div class="dle-top"><div class="inbox"></div><p class="dle-live" hidden></p><p class="dle-count"></p><div class="hints"></div></div>
@@ -437,7 +437,8 @@ function persondle(day) {
 function chkoun(day) {
   day = Math.min(Math.max(1, day || TODAY), TODAY);
   const M = DD(day).chkoun || dailyItem(FACTS.mysteries, 'chkoun', day); const key = 'chkoun:' + day; const MAX = 5;
-  let st = LS.get(key + ':state', { guesses: [], done: false, won: false });
+  let st = LS.get(key + ':state', null);
+  if (!st || st.m !== M.name) st = { m: M.name, guesses: [], done: false, won: false };
   const clues = M['clues_' + LANG] || M.clues_fr || M.clues_en;
   const kindTxt = M.kind === 'person' ? L({ en: 'Mystery person', fr: 'Personnalité mystère', ar: 'شخصية غامضة' }) : L({ en: 'Mystery place', fr: 'Lieu mystère', ar: 'مكان غامض' });
   const body = shell('chkoun', 'Chkoun?', 'شكون؟', L({ en: 'One mystery, five clues. Each wrong guess reveals the next clue. Where is it from?', fr: 'Un mystère, cinq indices. Chaque erreur dévoile l\'indice suivant. D\'où ça vient ?', ar: 'لغز واحد وخمسة تلميحات. كل خطأ يكشف التلميح التالي. من أين أصله؟' }), `
@@ -534,7 +535,9 @@ function ghouss(day) {
   day = Math.min(Math.max(1, day || TODAY), TODAY);
   const key = 'ghouss2:' + day;
   const P = ghoussPrompts(day);
-  let st = LS.get(key + ':state', { ans: [] });
+  const sig = P.map(p => p.k).join('|');
+  let st = LS.get(key + ':state', null);
+  if (!st || st.sig !== sig) st = { sig, ans: [] };
   const body = shell('ghouss', 'Ghouss', 'غوص', L({ en: 'Seven prompts about Tunisian food, festivals and football. Answers that few players give take you deeper.', fr: 'Sept questions sur la cuisine, les fêtes et le foot tunisiens. Plus ta réponse est rare chez les joueurs, plus tu plonges.', ar: 'سبعة أسئلة عن الأكل والأعياد وكرة القدم في تونس. كلما كانت إجابتك نادرة بين اللاعبين، غصت أعمق.' }), `
     ${dayPicker('ghouss', day, TODAY)}
     <div class="dive"><div class="gauge"><div class="water"></div><div class="diver"></div><span class="gm"></span></div><div class="dive-main"><div class="prompt"></div><div class="inbox"></div><div class="dym" hidden></div><ol class="log"></ol><div class="after"></div></div></div>`);
@@ -614,7 +617,8 @@ function tarikh(arg) {
   const key = 'tarikh:' + day;
   const N = 10, MAXL = 3;
   let st = mode === 'daily' ? LS.get(key + ':state', null) : null;
-  if (!st) st = { line: [deck[0]], idx: 1, marks: [], lives: MAXL, done: false, last: null };
+  const dsig = deck.slice(0, N).join(',');
+  if (!st || (mode === 'daily' && st.dsig !== dsig)) st = { dsig, line: [deck[0]], idx: 1, marks: [], lives: MAXL, done: false, last: null };
   const body = shell('tarikh', 'Tarikh', 'تاريخ', L({ en: 'Place each event in the right spot. Three mistakes and the timeline closes.', fr: 'Place chaque événement au bon endroit. Trois erreurs et la frise se ferme.', ar: 'ضع كل حدث في مكانه الصحيح. ثلاثة أخطاء وتُغلق الخط الزمني.' }), `
     <div class="tmodes"><a class="btn sm ${mode === 'daily' ? 'primary' : 'ghost'}" href="#tarikh">${t('daily')}</a><a class="btn sm ${mode === 'endless' ? 'primary' : 'ghost'}" href="#tarikh-endless">${t('endless')}</a></div>
     ${mode === 'daily' ? dayPicker('tarikh', day, TODAY) : ''}
