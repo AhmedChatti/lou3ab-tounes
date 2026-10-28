@@ -8,8 +8,10 @@ const GAMES = {
   blitz: { max: 24 }, 'blitz-del': { max: 200 },
   'akthar-pop': { max: 300 }, 'akthar-area': { max: 300 }, 'akthar-grow': { max: 300 }, 'akthar-theme': { max: 300 }
 };
-const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// accepts the default names and any prefixed variant the Vercel integration creates (e.g. lou3ab_KV_REST_API_URL)
+const envEnd = suffix => process.env[suffix] || Object.entries(process.env).find(([k, v]) => k.endsWith('_' + suffix) && v)?.[1];
+const URL_ = envEnd('KV_REST_API_URL') || envEnd('UPSTASH_REDIS_REST_URL');
+const TOKEN = envEnd('KV_REST_API_TOKEN') || envEnd('UPSTASH_REDIS_REST_TOKEN');
 const TTL = 60 * 60 * 24 * 400;
 
 async function redis(cmds) {
