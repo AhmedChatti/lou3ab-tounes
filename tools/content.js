@@ -8,8 +8,8 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const A = p => path.join(__dirname, '..', 'assets', p);
 const ctx = { window: {} }; vm.createContext(ctx);
-for (const f of ['data.js', 'facts.js', 'history.js', 'daily.js']) vm.runInContext(fs.readFileSync(A(f), 'utf8'), ctx, { filename: f });
-const { TN, FACTS, HISTORY, DAILY = {} } = ctx.window;
+for (const f of ['data.js', 'facts.js', 'history.js', 'people.js', 'daily.js']) vm.runInContext(fs.readFileSync(A(f), 'utf8'), ctx, { filename: f });
+const { TN, FACTS, HISTORY, PEOPLE = [], DAILY = {} } = ctx.window;
 const G = new Set(TN.govs.map(g => g.id)), D = new Set(TN.dels.map(d => d.id));
 const cmd = process.argv[2];
 if (cmd === 'govs') { TN.govs.forEach(g => console.log([g.id, g.fr, g.ar, g.p24, g.area, g.region, g.nb.join(' ')].join('\t'))); process.exit(0); }
@@ -18,6 +18,7 @@ if (cmd === 'used') {
   console.log('# mysteries:', FACTS.mysteries.map(m => m.name).concat(Object.values(DAILY).map(x => x.chkoun && x.chkoun.name).filter(Boolean)).join(' | '));
   console.log('# origins:', FACTS.origins.map(o => o.fr).concat(Object.values(DAILY).flatMap(x => (x.mnin || []).map(o => o.fr))).join(' | '));
   console.log('# history:', HISTORY.map(h => h.y + ' ' + h.fr).concat(Object.values(DAILY).flatMap(x => (x.tarikh || []).map(h => h.y + ' ' + h.fr))).join(' | '));
+  console.log('# persondle people:', PEOPLE.map(p => p.name).concat(Object.values(DAILY).map(x => x.persondle && x.persondle.name).filter(Boolean)).join(' | '));
   console.log('# akthar themes:', Object.values(DAILY).map(x => x.akthar && x.akthar.lab_fr).filter(Boolean).join(' | '));
   console.log('# wilayadle targets by date:', Object.entries(DAILY).map(([k, x]) => x.wilayadle ? k + '=' + x.wilayadle.g : '').filter(Boolean).join(' '));
   process.exit(0);
@@ -37,6 +38,7 @@ for (const [k, x] of Object.entries(DAILY)) {
   if ((x.ghouss || []).length > 7) E(k, 'max 7 ghouss prompts');
   (x.tarikh || []).forEach((h, i) => { const kk = `${k} tarikh[${i}]`; if (typeof h.y !== 'number') E(kk, 'y must be a number'); ['en', 'fr', 'ar', 'd_en', 'd_fr', 'd_ar'].forEach(f => str(h, f, kk)); if (h.g && !G.has(h.g)) E(kk, 'g invalid'); if (HISTORY.some(o => o.fr === h.fr)) E(kk, 'duplicate of existing event'); });
   (x.mnin || []).forEach((o, i) => { const kk = `${k} mnin[${i}]`; if (!Array.isArray(o.g) || !o.g.length || o.g.some(id => !G.has(id))) E(kk, 'g must be array of governorate ids'); if (!CATS.includes(o.cat)) E(kk, 'cat must be one of ' + CATS); ['en', 'fr', 'ar', 'sub_en', 'sub_fr', 'sub_ar', 'why_en', 'why_fr', 'why_ar'].forEach(f => str(o, f, kk)); });
+  if (x.persondle) { const p = x.persondle, kk = k + ' persondle'; ['name', 'ar', 'k_en', 'k_fr', 'k_ar'].forEach(f => str(p, f, kk)); if (!['M', 'F'].includes(p.sex)) E(kk, 'sex M|F'); if (!['music', 'sport', 'politics', 'history', 'literature', 'cinema'].includes(p.field)) E(kk, 'field invalid'); if (!G.has(p.g)) E(kk, 'g invalid'); if (!Number.isInteger(p.y)) E(kk, 'y must be an integer year'); if (typeof p.alive !== 'boolean') E(kk, 'alive must be true/false'); if (PEOPLE.some(q => q.name === p.name) || Object.entries(DAILY).some(([k2, y]) => k2 !== k && y.persondle && y.persondle.name === p.name)) E(kk, 'person already used'); }
   if (x.akthar) { const a = x.akthar; ['lab_en', 'lab_fr', 'lab_ar', 'source'].forEach(f => str(a, f, k + ' akthar')); if (!Array.isArray(a.items) || a.items.length < 6) E(k, 'akthar needs >= 6 items'); else a.items.forEach((it, i) => { if (typeof it.value !== 'number' || !isFinite(it.value)) E(`${k} akthar.items[${i}]`, 'value must be a number'); ['en', 'fr', 'ar'].forEach(f => str(it, f, `${k} akthar.items[${i}]`)); if (it.g && !G.has(it.g)) E(`${k} akthar.items[${i}]`, 'g invalid'); }); }
 }
 if (errs.length) { console.error('INVALID daily.js\n' + errs.join('\n')); process.exit(1); }

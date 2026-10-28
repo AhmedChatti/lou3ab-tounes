@@ -58,6 +58,7 @@ const S = {
   factLang: { en: '', fr: '', ar: 'بعض البطاقات بالفرنسية.' }
 };
 const t = k => (S[k] && (S[k][LANG] || S[k].fr)) || k;
+const t_ = t;
 const L = o => o[LANG] || o.fr || o.en;                                    // pick {en,fr,ar}
 const LF = (o, base) => o[base + '_' + LANG] || o[base + '_fr'] || o[base + '_en']; // pick field_xx
 const nm = o => LANG === 'ar' ? o.ar : LANG === 'fr' ? o.fr : o.en;          // place name
@@ -81,6 +82,8 @@ const PAST = Object.keys(DAILY).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k) && day
 PAST.forEach(k => { const n = dayOf(k), x = DAILY[k];
   (x.mnin || []).forEach(o => FACTS.origins.push(Object.assign({}, o, { day: n })));
   (x.tarikh || []).forEach(h => HIST.push(Object.assign({}, h, { day: n }))); });
+window.PEOPLE = (window.PEOPLE || []).map((p, i) => Object.assign({ id: 'p' + i }, p));
+PAST.forEach(k => { const x = DAILY[k].persondle; if (x && x.name && !window.PEOPLE.some(p => p.name === x.name)) { const id = 'd' + k.replace(/-/g, ''); x.id = id; window.PEOPLE.push(Object.assign({}, x, { id, day: dayOf(k) })); } });
 const isNew = o => o.day && TODAY - o.day < 7;
 function dailyItem(list, key, day) { const n = list.length, cyc = Math.floor((day - 1) / n); return shuffle(list, rng(key + ':' + cyc))[(day - 1) % n]; }
 
@@ -107,6 +110,9 @@ function matchAll(input, idx) {
   const exact = idx.filter(e => e.k.some(k => ik.includes(k))).map(e => e.id); if (exact.length) return exact;
   // "Sfax" → Sfax Ville / Sfax Ouest / Sfax Sud (word-prefix match)
   const pre = idx.filter(e => e.k.some(k => ik.some(i => i.length >= 3 && k.startsWith(i + ' ')))).map(e => e.id); if (pre.length) return pre;
+  // "Chebbi" → Aboul-Qacem Chebbi (every typed word is a word of the name)
+  const iw = (ik[0] || '').split(' ').filter(w => w.length >= 3);
+  if (iw.length) { const wd = idx.filter(e => e.k.some(k => { const kw = k.split(' '); return iw.every(w => kw.includes(w)); })).map(e => e.id); if (wd.length) return wd; }
   const c = ik[1] || ik[0]; const tol = c.length >= 8 ? 2 : c.length >= 5 ? 1 : 0; if (!tol) return [];
   let best = 9, out = [];
   idx.forEach(e => e.k.forEach(k => { const d = lev(c, k.replace(/ /g, '')); if (d < best) { best = d; out = [e.id]; } else if (d === best && !out.includes(e.id)) out.push(e.id); }));
@@ -191,7 +197,8 @@ const govList = () => GOVS.map(g => ({ label: nm(g), alt: LANG === 'ar' ? g.fr :
    HOME
    ========================================================= */
 const GAMES = [
-  { id: 'wilayadle', name: 'Wilayadle', ar: 'ولايدل', daily: true, d: { en: 'Name the governorate from its outline. Six guesses, distance and direction after each one.', fr: 'Devine le gouvernorat d\'après sa silhouette. Six essais, avec distance et direction.', ar: 'خمّن الولاية من شكلها. ست محاولات مع المسافة والاتجاه.' } },
+  { id: 'wilayadle', name: 'Wilayadle', ar: 'ولايدل', daily: true, d: { en: 'Guess the governorate: region, coast, borders, population, area… green, orange or red.', fr: 'Devine le gouvernorat : région, littoral, frontières, population, superficie… vert, orange ou rouge.', ar: 'خمّن الولاية: الإقليم، الساحل، الحدود، السكان، المساحة… أخضر أو برتقالي أو أحمر.' } },
+  { id: 'persondle', name: 'Persondle', ar: 'شخصدل', daily: true, d: { en: 'Guess the Tunisian personality: field, birthplace, birth year… each column gets warmer.', fr: 'Devine la personnalité tunisienne : domaine, lieu et année de naissance… chaque colonne te guide.', ar: 'خمّن الشخصية التونسية: المجال، مكان وسنة الولادة… كل عمود يرشدك.' } },
   { id: 'chkoun', name: 'Chkoun?', ar: 'شكون؟', daily: true, d: { en: 'A mystery person or place, told in clues. Three guesses on the map to find where they come from.', fr: 'Une personne ou un lieu mystère, raconté en indices. Trois essais sur la carte pour trouver d\'où il vient.', ar: 'شخصية أو مكان غامض عبر تلميحات. ثلاث محاولات على الخريطة لمعرفة أصله.' } },
   { id: 'ghouss', name: 'Ghouss', ar: 'غوص', daily: true, d: { en: 'Seven prompts a day. The more obscure your answer, the deeper you dive.', fr: 'Sept questions par jour. Plus ta réponse est rare, plus tu plonges profond.', ar: 'سبعة أسئلة يومياً. كلما كانت إجابتك أندر، غصت أعمق.' } },
   { id: 'tarikh', name: 'Tarikh', ar: 'تاريخ', daily: true, d: { en: 'Put Tunisian history in order, from Carthage to the Quartet, via Louis IX and the Hafsids.', fr: 'Remets l\'histoire de la Tunisie dans l\'ordre, de Carthage au Quartet, en passant par Saint Louis et les Hafsides.', ar: 'رتّب تاريخ تونس من قرطاج إلى الرباعي، مروراً بلويس التاسع والحفصيين.' } },
@@ -201,11 +208,12 @@ const GAMES = [
   { id: 'party', name: 'Party', ar: 'لمّة', d: { en: 'Pass the phone around. Lose three lives and you are out. Or send a challenge link.', fr: 'Faites tourner le téléphone. Trois vies perdues et c\'est fini. Ou envoie un lien défi.', ar: 'مرّروا الهاتف. من يخسر ثلاث أرواح يخرج. أو أرسل رابط تحدٍّ.' } }
 ];
 function home() {
-  const NEWK = { wilayadle: 'wilayadle', chkoun: 'chkoun', ghouss: 'ghouss', tarikh: 'tarikh', mnin: 'mnin', akthar: 'akthar' };
+  const NEWK = { persondle: 'persondle', wilayadle: 'wilayadle', chkoun: 'chkoun', ghouss: 'ghouss', tarikh: 'tarikh', mnin: 'mnin', akthar: 'akthar' };
   const nw = id => NEWK[id] && DD(TODAY)[NEWK[id]] ? `<span class="chip new">${t('newT')}</span>` : '';
   const st = id => { const daily = LS.get(id + ':' + TODAY); const best = LS.get(id + ':best'); return daily ? `<span class="chip ok">${t('done')}</span>` : best != null ? `<span class="chip">${t('best')} ${best}</span>` : ''; };
   const thumbs = {
-    wilayadle: silhouette(G['TN-53'], 'thumb sil'),
+    wilayadle: `<div class="thumb tgrid"><i class="ok"></i><i class="part"></i><i class="no"></i><i class="ok"></i></div>`,
+    persondle: `<div class="thumb tgrid"><i class="no"></i><i class="ok"></i><i class="part"></i><i class="ok"></i></div>`,
     chkoun: `<div class="thumb q">?</div>`,
     ghouss: `<svg class="thumb" viewBox="0 0 60 60"><path class="t-sea" d="M0 14 Q15 8 30 14 T60 14 V60 H0Z"/><circle class="t-dot" cx="30" cy="44" r="5"/><path class="t-line" d="M30 14 V38"/></svg>`,
     tarikh: `<svg class="thumb" viewBox="0 0 60 60"><path class="t-line" d="M6 30 H54"/><circle class="t-dot" cx="12" cy="30" r="4"/><circle class="t-dot2" cx="30" cy="30" r="4"/><circle class="t-dot" cx="48" cy="30" r="4"/></svg>`,
@@ -228,58 +236,125 @@ function home() {
 }
 
 /* =========================================================
-   WILAYADLE — outline guessing (Worldle-like) + neighbour bonus
+   DLE ENGINE — Loldle-style attribute grid (Wilayadle, Persondle)
    ========================================================= */
-function wilayadle(day) {
-  day = Math.min(Math.max(1, day || TODAY), TODAY);
-  const WD = DD(day).wilayadle; const target = (WD && G[WD.g]) || dailyItem(GOVS, 'wilayadle', day);
-  const key = 'wilayadle:' + day; const MAX = 6;
-  let st = LS.get(key + ':state', { guesses: [], done: false, won: false, bonus: null });
-  const body = shell('wilayadle', 'Wilayadle', 'ولايدل', L({ en: 'Which governorate is this?', fr: 'Quel est ce gouvernorat ?', ar: 'ما هذه الولاية؟' }), `
-    ${dayPicker('wilayadle', day, TODAY)}
-    <div class="silbox">${silhouette(target)}</div>
-    <div class="rows"></div><div class="inbox"></div><div class="after"></div>`);
-  const rows = $('.rows', body), inbox = $('.inbox', body), after = $('.after', body);
+const MACRO = { 'grand-tunis': 'N', 'nord-est': 'N', 'nord-ouest': 'N', 'centre-est': 'C', 'centre-ouest': 'C', 'sud-est': 'S', 'sud-ouest': 'S' };
+const near = (a, b, pct) => Math.abs(a - b) <= Math.abs(b) * pct;
+const cmpNum = (g, t, partOk) => ({ cls: g === t ? 'ok' : partOk ? 'part' : 'no', arrow: g === t ? null : t > g ? 'up' : 'down' });
+const LEG = { ok: { en: 'Correct', fr: 'Correct', ar: 'صحيح' }, part: { en: 'Partial', fr: 'Partiel', ar: 'جزئي' }, no: { en: 'Incorrect', fr: 'Incorrect', ar: 'خطأ' }, up: { en: 'Higher', fr: 'Plus haut', ar: 'أعلى' }, down: { en: 'Lower', fr: 'Plus bas', ar: 'أقل' } };
+function dle(cfg) {
+  const day = Math.min(Math.max(1, cfg.day || TODAY), TODAY);
+  const target = cfg.target(day); const key = cfg.id + ':' + day;
+  let st = LS.get(key + ':state', { guesses: [], done: false, bonus: null });
+  if (st.guesses.some(id => !cfg.byId(id))) st = { guesses: [], done: false, bonus: null };
+  const body = shell(cfg.id, cfg.title, cfg.ar, L(cfg.sub), `
+    ${dayPicker(cfg.id, day, TODAY)}
+    <div class="dle-top"><div class="inbox"></div><p class="dle-count"></p><div class="hints"></div></div>
+    <div class="gridwrap"><table class="dle"><thead><tr>${['', ...cfg.cols.map(c => L(c.head))].map(h => `<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody></tbody></table></div>
+    <div class="legend">${['ok', 'part', 'no', 'up', 'down'].map(k => `<span><i class="sw ${k}"></i>${L(LEG[k])}</span>`).join('')}</div>
+    <div class="after"></div>`);
+  const tb = $('tbody', body), inbox = $('.inbox', body), after = $('.after', body), hints = $('.hints', body), count = $('.dle-count', body);
   const save = () => LS.set(key + ':state', st);
-  function rowHTML(id) {
-    const g = G[id]; const d = km(g, target), pct = Math.round(Math.max(0, 100 - d / 6.5)), ok = id === target.id;
-    return `<div class="row ${ok ? 'ok' : ''}"><span class="rn">${esc(nm(g))}</span><span class="rk">${ok ? '—' : fmt(d) + ' km'}</span><span class="ra">${ok ? '🎉' : `<i style="--r:${bearing(g, target)}deg">↑</i>`}</span><span class="rp">${ok ? 100 : pct}%</span></div>`;
+  const cell = (c, g, i, fresh) => { const r = c.cell(g, target); return `<td class="cl ${r.cls} ${r.arrow ? 'ar-' + r.arrow : ''} ${fresh ? 'flip' : ''}" style="--i:${i + 1}"><span>${esc(r.txt)}</span></td>`; };
+  function rowHTML(id, fresh) { const g = cfg.byId(id); return `<tr><th scope="row" class="cl who ${id === target.id ? 'ok' : ''} ${fresh ? 'flip' : ''}" style="--i:0">${cfg.face(g)}<span>${esc(cfg.label(g))}</span></th>${cfg.cols.map((c, i) => cell(c, g, i, fresh)).join('')}</tr>`; }
+  function drawHints() {
+    const n = st.guesses.length;
+    hints.innerHTML = cfg.hints.map((h, i) => { const open = st.done || n >= h.at; return `<button class="hint ${open ? 'open' : ''}" data-h="${i}" ${open ? '' : 'disabled'}><b>${L(h.label)}</b><small>${open ? L({ en: 'Tap to show', fr: 'Afficher', ar: 'اعرض' }) : L({ en: `in ${h.at - n} tries`, fr: `dans ${h.at - n} essais`, ar: `بعد ${h.at - n} محاولات` })}</small></button>`; }).join('') + '<div class="hint-out"></div>';
+    $$('.hint.open', hints).forEach(b => b.onclick = () => { $('.hint-out', hints).innerHTML = cfg.hints[+b.dataset.h].html(target); });
   }
-  function draw() {
-    rows.innerHTML = st.guesses.map(rowHTML).join('') + Array(Math.max(0, MAX - st.guesses.length)).fill('<div class="row empty"></div>').join('');
-    if (st.done) { inbox.innerHTML = ''; end(); }
+  function draw(fresh) {
+    tb.innerHTML = st.guesses.slice().reverse().map((id, i) => rowHTML(id, fresh && i === 0)).join('');
+    count.textContent = st.guesses.length ? `${st.guesses.length} ${L({ en: st.guesses.length > 1 ? 'guesses' : 'guess', fr: 'essai' + (st.guesses.length > 1 ? 's' : ''), ar: 'محاولة' })}` : L({ en: 'Unlimited guesses. Each column tells you how close you are.', fr: 'Essais illimités. Chaque colonne indique si tu chauffes.', ar: 'محاولات غير محدودة. كل عمود يخبرك كم أنت قريب.' });
+    drawHints();
+    if (st.done) { inbox.innerHTML = ''; setTimeout(end, fresh ? (cfg.cols.length + 1) * 260 : 0); }
   }
-  function squares(id) { const d = km(G[id], target); const pct = id === target.id ? 100 : Math.max(0, 100 - d / 6.5); const full = Math.floor(pct / 20); return '🟩'.repeat(full) + (pct % 20 >= 10 && full < 5 ? '🟨' : '') + '⬜'.repeat(5 - full - (pct % 20 >= 10 && full < 5 ? 1 : 0)); }
-  function shareText() { return `Wilayadle #${day} ${st.won ? st.guesses.length : 'X'}/${MAX}${st.bonus ? ` ⭐${st.bonus[0]}/${st.bonus[1]}` : ''}\n` + st.guesses.map(id => squares(id) + (id === target.id ? '🎉' : arrowEmoji(bearing(G[id], target)))).join('\n') + `\n${link('wilayadle-' + day)}`; }
+  const sq = r => r.cls === 'ok' ? '🟩' : r.cls === 'part' ? '🟧' : r.arrow === 'up' ? '⬆️' : r.arrow === 'down' ? '⬇️' : '🟥';
+  function shareText() { const rows = st.guesses.map(id => cfg.cols.map(c => sq(c.cell(cfg.byId(id), target))).join('')); const shown = rows.length > 6 ? [...rows.slice(0, 2), '…', ...rows.slice(-3)] : rows; return `${cfg.title} #${day} · ${st.guesses.length} ${L({ en: 'guesses', fr: 'essais', ar: 'محاولات' })}${st.bonus ? ` · ⭐${st.bonus[0]}/${st.bonus[1]}` : ''}\n${shown.join('\n')}\n${link(cfg.id + '-' + day)}`; }
   function end() {
+    if (after.dataset.done) return; after.dataset.done = 1;
     const sh = shareBtn(shareText);
-    after.innerHTML = `<div class="result ${st.won ? 'win' : 'lose'}"><p class="rt">${st.won ? t('won') : t('lost')}</p><h2>${esc(nm(target))} <span lang="ar">${LANG === 'ar' ? esc(target.fr) : esc(target.ar)}</span></h2>
-      <dl class="facts"><div><dt>${t('pop')}</dt><dd>${fmt(target.p24)}</dd></div><div><dt>${t('area')}</dt><dd>${fmt(target.area)} km²</dd></div><div><dt>${t('region')}</dt><dd>${esc(nm(REG[target.region]))}</dd></div></dl>${WD && WD.g === target.id && LF(WD, 'fact') ? `<p class="dfact">${esc(LF(WD, 'fact'))}</p>` : ''}</div>
-      <div class="bonus"><p class="bt">${t('bonusT')}</p><div class="mapwrap">${mapSVG({ level: 'gov', inset: true, cls: id => id === target.id ? 'target' : '' })}</div><div class="brow"></div></div>
-      <div class="actions">${sh.html}</div>`;
-    sh.bind(after);
-    const mw = $('.mapwrap', after), brow = $('.brow', after);
-    const picked = new Set();
-    if (st.bonus) { target.nb.forEach(n => setCls(mw, n, 'good')); brow.innerHTML = `<p class="score">⭐ ${st.bonus[0]}/${st.bonus[1]}</p>`; return; }
-    brow.innerHTML = `<button class="btn" id="bonus-check">${t('check')}</button>`;
-    onPick(mw, id => { if (st.bonus || id === target.id) return; picked.has(id) ? picked.delete(id) : picked.add(id); setCls(mw, id, 'sel', picked.has(id)); });
-    $('#bonus-check', after).onclick = () => {
-      let good = 0; picked.forEach(id => { const ok = target.nb.includes(id); if (ok) good++; setCls(mw, id, ok ? 'good' : 'bad'); });
-      target.nb.forEach(n => setCls(mw, n, 'good'));
-      const sc = Math.max(0, good - (picked.size - good)); st.bonus = [sc, target.nb.length]; save();
-      brow.innerHTML = `<p class="score">⭐ ${sc}/${target.nb.length}</p>`; after.querySelector('[data-share]').onclick = e => copy(shareText(), e.target);
-    };
+    after.innerHTML = `<div class="result win"><p class="rt">${t('won')} · ${st.guesses.length} ${L({ en: 'guesses', fr: 'essais', ar: 'محاولات' })}</p><h2>${esc(cfg.label(target))} <span lang="ar">${esc(cfg.alt(target))}</span></h2>${cfg.reveal(target, day)}</div>${cfg.bonus ? '<div class="bonusbox"></div>' : ''}<div class="actions">${sh.html}</div>`;
+    sh.bind(after); if (cfg.bonus) cfg.bonus($('.bonusbox', after), target, st, save, () => $$('[data-share]', after).forEach(b => b.onclick = () => copy(shareText(), b)));
+    after.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
-  if (!st.done) acInput(inbox, govList, v => {
-    const m = matchAll(v, GIDX); if (!m.length) { toast(t('unknown'), 'bad'); return false; }
-    const id = m[0]; if (st.guesses.includes(id)) { toast(t('already')); return false; }
-    st.guesses.push(id);
-    if (id === target.id) st.done = st.won = true;
-    else if (st.guesses.length >= MAX) st.done = true;
-    if (st.done && day === TODAY) LS.set('wilayadle:' + TODAY, true);
-    save(); draw();
-  }, t('typeGov'));
-  draw();
+  if (!st.done) acInput(inbox, () => cfg.list().filter(x => !st.guesses.includes(x.id)), v => {
+    const m = cfg.match(v).filter(id => !st.guesses.includes(id)); if (!m.length) { toast(cfg.match(v).length ? t('already') : L(cfg.unknown), 'bad'); return false; }
+    st.guesses.push(m[0]); if (m[0] === target.id) { st.done = true; if (day === TODAY) LS.set(cfg.id + ':' + TODAY, true); const b = LS.get(cfg.id + ':best', null); if (b == null || st.guesses.length < b) LS.set(cfg.id + ':best', st.guesses.length); }
+    save(); draw(true);
+  }, L(cfg.ph));
+  draw(false);
+}
+
+/* ---------- Wilayadle ---------- */
+const BORD = { DZ: { en: 'Algeria', fr: 'Algérie', ar: 'الجزائر' }, LY: { en: 'Libya', fr: 'Libye', ar: 'ليبيا' } };
+const yesno = b => L(b ? { en: 'Yes', fr: 'Oui', ar: 'نعم' } : { en: 'No', fr: 'Non', ar: 'لا' });
+const kfmt = n => n >= 1e6 ? (n / 1e6).toFixed(2).replace('.', LANG === 'en' ? '.' : ',') + (LANG === 'ar' ? ' م' : ' M') : n >= 1e3 ? Math.round(n / 1e3) + (LANG === 'ar' ? ' ألف' : ' k') : String(n);
+function wilayadle(day) {
+  dle({
+    id: 'wilayadle', title: 'Wilayadle', ar: 'ولايدل', day,
+    sub: { en: 'Guess today\'s governorate. Each guess compares region, coast, borders, population, area and delegations.', fr: 'Devine le gouvernorat du jour. Chaque essai compare région, littoral, frontières, population, superficie et délégations.', ar: 'خمّن ولاية اليوم. كل محاولة تقارن الإقليم والساحل والحدود والسكان والمساحة والمعتمديات.' },
+    ph: { en: 'Type a governorate…', fr: 'Tape un gouvernorat…', ar: 'اكتب اسم ولاية…' }, unknown: { en: 'Not a governorate', fr: 'Ce n\'est pas un gouvernorat', ar: 'ليست ولاية' },
+    target: d => { const WD = DD(d).wilayadle; return (WD && G[WD.g]) || dailyItem(GOVS, 'wilayadle', d); },
+    byId: id => G[id], label: nm, alt: g => LANG === 'ar' ? g.fr : g.ar,
+    list: () => GOVS.map(g => ({ id: g.id, label: nm(g), alt: LANG === 'ar' ? g.fr : g.ar })).sort((a, b) => a.label.localeCompare(b.label)),
+    match: v => matchAll(v, GIDX),
+    face: g => miniMap(g.id),
+    cols: [
+      { head: { en: 'Region', fr: 'Région', ar: 'الإقليم' }, cell: (g, t) => ({ cls: g.region === t.region ? 'ok' : MACRO[g.region] === MACRO[t.region] ? 'part' : 'no', txt: nm(REG[g.region]) }) },
+      { head: { en: 'Coast', fr: 'Littoral', ar: 'ساحلية' }, cell: (g, t) => ({ cls: g.coast === t.coast ? 'ok' : 'no', txt: yesno(g.coast) }) },
+      { head: { en: 'Borders', fr: 'Frontière', ar: 'الحدود' }, cell: (g, t) => { const a = g.border.join(), b = t.border.join(); return { cls: a === b ? 'ok' : g.border.some(x => t.border.includes(x)) ? 'part' : 'no', txt: g.border.length ? g.border.map(x => L(BORD[x])).join(' + ') : '—' }; } },
+      { head: { en: 'Population', fr: 'Population', ar: 'السكان' }, cell: (g, t) => Object.assign(cmpNum(g.p24, t.p24, near(g.p24, t.p24, .15)), { txt: kfmt(g.p24) }) },
+      { head: { en: 'Area km²', fr: 'Superficie km²', ar: 'المساحة كم²' }, cell: (g, t) => Object.assign(cmpNum(g.area, t.area, near(g.area, t.area, .15)), { txt: fmt(g.area) }) },
+      { head: { en: 'Delegations', fr: 'Délégations', ar: 'المعتمديات' }, cell: (g, t) => Object.assign(cmpNum(g.ndel, t.ndel, Math.abs(g.ndel - t.ndel) <= 2), { txt: String(g.ndel) }) },
+      { head: { en: 'Distance', fr: 'Distance', ar: 'المسافة' }, cell: (g, t) => g.id === t.id ? { cls: 'ok', txt: '0 km' } : { cls: km(g, t) < 120 ? 'part' : 'no', txt: `${arrowEmoji(bearing(g, t))} ${fmt(km(g, t))} km` } }
+    ],
+    hints: [
+      { at: 4, label: { en: 'Outline', fr: 'Silhouette', ar: 'الشكل' }, html: t => silhouette(t, 'sil small') },
+      { at: 7, label: { en: 'First letter', fr: 'Première lettre', ar: 'الحرف الأول' }, html: t => `<p class="bigletter">${esc(nm(t)[0])}…</p>` }
+    ],
+    reveal: (t, d) => { const WD = DD(d).wilayadle; return `<dl class="facts"><div><dt>${t_('pop')}</dt><dd>${fmt(t.p24)}</dd></div><div><dt>${t_('area')}</dt><dd>${fmt(t.area)} km²</dd></div><div><dt>${t_('region')}</dt><dd>${esc(nm(REG[t.region]))}</dd></div></dl>${WD && WD.g === t.id && LF(WD, 'fact') ? `<p class="dfact">${esc(LF(WD, 'fact'))}</p>` : ''}`; },
+    bonus: (box, target, st, save, rebind) => {
+      box.innerHTML = `<div class="bonus"><p class="bt">${t_('bonusT')}</p><div class="mapwrap">${mapSVG({ level: 'gov', inset: true, cls: id => id === target.id ? 'target' : '' })}</div><div class="brow"></div></div>`;
+      const mw = $('.mapwrap', box), brow = $('.brow', box), picked = new Set();
+      if (st.bonus) { target.nb.forEach(n => setCls(mw, n, 'good')); brow.innerHTML = `<p class="score">⭐ ${st.bonus[0]}/${st.bonus[1]}</p>`; return; }
+      brow.innerHTML = `<button class="btn" id="bonus-check">${t_('check')}</button>`;
+      onPick(mw, id => { if (st.bonus || id === target.id) return; picked.has(id) ? picked.delete(id) : picked.add(id); setCls(mw, id, 'sel', picked.has(id)); });
+      $('#bonus-check', box).onclick = () => { let good = 0; picked.forEach(id => { const ok = target.nb.includes(id); if (ok) good++; setCls(mw, id, ok ? 'good' : 'bad'); }); target.nb.forEach(n => setCls(mw, n, 'good')); st.bonus = [Math.max(0, good - (picked.size - good)), target.nb.length]; save(); brow.innerHTML = `<p class="score">⭐ ${st.bonus[0]}/${st.bonus[1]}</p>`; rebind(); };
+    }
+  });
+}
+
+/* ---------- Persondle ---------- */
+const FIELD = { music: { en: 'Music', fr: 'Musique', ar: 'موسيقى' }, sport: { en: 'Sport', fr: 'Sport', ar: 'رياضة' }, politics: { en: 'Politics', fr: 'Politique', ar: 'سياسة' }, history: { en: 'History', fr: 'Histoire', ar: 'تاريخ' }, literature: { en: 'Literature', fr: 'Littérature', ar: 'أدب' }, cinema: { en: 'Cinema', fr: 'Cinéma', ar: 'سينما' } };
+const FGROUP = { music: 'arts', cinema: 'arts', literature: 'arts', politics: 'public', history: 'public', sport: 'sport' };
+const pname = p => LANG === 'ar' ? p.ar : p.name;
+function persondle(day) {
+  const P = window.PEOPLE; const byId = Object.fromEntries(P.map(p => [p.id, p]));
+  const PIDX = buildIndex(P.map(p => ({ id: p.id, en: p.name, fr: p.name, ar: p.ar })));
+  dle({
+    id: 'persondle', title: 'Persondle', ar: 'شخصدل', day,
+    sub: { en: 'Guess today\'s Tunisian personality. Compare field, gender, birthplace, birth year and more.', fr: 'Devine la personnalité tunisienne du jour. Compare domaine, genre, lieu et année de naissance…', ar: 'خمّن الشخصية التونسية لليوم. قارن المجال والجنس ومكان وسنة الولادة…' },
+    ph: { en: 'Type a name…', fr: 'Tape un nom…', ar: 'اكتب اسماً…' }, unknown: { en: 'Not in the list', fr: 'Pas dans la liste', ar: 'غير موجود في القائمة' },
+    target: d => { const x = DD(d).persondle; return (x && byId[x.id]) || dailyItem(P.filter(p => !p.day), 'persondle', d); },
+    byId: id => byId[id], label: pname, alt: p => LANG === 'ar' ? p.name : p.ar,
+    list: () => P.filter(p => !p.day || p.day <= TODAY).map(p => ({ id: p.id, label: pname(p), alt: LANG === 'ar' ? p.name : p.ar })).sort((a, b) => a.label.localeCompare(b.label)),
+    match: v => matchAll(v, PIDX),
+    face: p => `<i class="avatar f-${p.field}" aria-hidden="true">${esc(p.name.replace(/^(El|Al|Ibn|Abou?l?)[- ]/i, '').split(/[ -]/).filter(Boolean).map(w => w[0]).slice(0, 2).join(''))}</i>`,
+    cols: [
+      { head: { en: 'Field', fr: 'Domaine', ar: 'المجال' }, cell: (g, t) => ({ cls: g.field === t.field ? 'ok' : FGROUP[g.field] === FGROUP[t.field] ? 'part' : 'no', txt: L(FIELD[g.field]) }) },
+      { head: { en: 'Gender', fr: 'Genre', ar: 'الجنس' }, cell: (g, t) => ({ cls: g.sex === t.sex ? 'ok' : 'no', txt: L(g.sex === 'F' ? { en: 'Woman', fr: 'Femme', ar: 'امرأة' } : { en: 'Man', fr: 'Homme', ar: 'رجل' }) }) },
+      { head: { en: 'Born in', fr: 'Né·e à (gouv.)', ar: 'ولاية الولادة' }, cell: (g, t) => ({ cls: g.g === t.g ? 'ok' : G[g.g].region === G[t.g].region ? 'part' : 'no', txt: nm(G[g.g]) }) },
+      { head: { en: 'Region', fr: 'Région', ar: 'الإقليم' }, cell: (g, t) => ({ cls: G[g.g].region === G[t.g].region ? 'ok' : MACRO[G[g.g].region] === MACRO[G[t.g].region] ? 'part' : 'no', txt: nm(REG[G[g.g].region]) }) },
+      { head: { en: 'Coastal birthplace', fr: 'Gouv. littoral', ar: 'ولاية ساحلية' }, cell: (g, t) => ({ cls: G[g.g].coast === G[t.g].coast ? 'ok' : 'no', txt: yesno(G[g.g].coast) }) },
+      { head: { en: 'Born', fr: 'Naissance', ar: 'سنة الولادة' }, cell: (g, t) => Object.assign(cmpNum(g.y, t.y, Math.abs(g.y - t.y) <= 10), { txt: yearTxt(g.y) }) },
+      { head: { en: 'Living', fr: 'Vivant·e', ar: 'على قيد الحياة' }, cell: (g, t) => ({ cls: g.alive === t.alive ? 'ok' : 'no', txt: yesno(g.alive) }) }
+    ],
+    hints: [
+      { at: 5, label: { en: 'Known for', fr: 'Connu·e pour', ar: 'اشتهر بـ' }, html: t => `<p class="hinttxt">${esc(t['k_' + LANG] || t.k_fr)}</p>` },
+      { at: 8, label: { en: 'Initials', fr: 'Initiales', ar: 'الحروف الأولى' }, html: t => `<p class="bigletter">${esc(t.name.split(/[ -]/).map(w => w[0]).join('. '))}.</p>` }
+    ],
+    reveal: t => `<p>${esc(t['k_' + LANG] || t.k_fr)} · ${esc(L(FIELD[t.field]))} · ${yearTxt(t.y)} · ${esc(nm(G[t.g]))}</p>${miniMap(t.g)}`
+  });
 }
 
 /* =========================================================
@@ -647,6 +722,7 @@ function route() {
   switch (g) {
     case 'wilayadle': return wilayadle(+a || TODAY);
     case 'chkoun': return chkoun(+a || TODAY);
+    case 'persondle': return persondle(+a || TODAY);
     case 'ghouss': return ghouss(+a || TODAY);
     case 'tarikh': return tarikh(a || TODAY);
     case 'mnin': return mnin(a);

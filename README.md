@@ -4,7 +4,8 @@ Eight trivia games about Tunisia, in French, English and Arabic.
 
 | Game | Type | What you do |
 |---|---|---|
-| Wilayadle | daily | Guess the governorate from its outline (6 tries, distance + direction), then a bonus: tap its neighbours |
+| Wilayadle | daily | Loldle-style: guess the governorate; each column (region, coast, borders, population, area, delegations, distance) turns green, orange or red with ↑↓ arrows. Bonus: tap its neighbours |
+| Persondle | daily | Loldle-style: guess the Tunisian personality (field, gender, birthplace, region, birth year, living). Roster in `assets/people.js`, plus one new person per day |
 | Chkoun? | daily | Mystery person or place told in clues, 3 guesses on the map to find where they come from |
 | Ghouss | daily | 7 prompts; rarer (less populated) answers dive deeper |
 | Tarikh | daily + endless | Place historical events (814 BC → 2015) on a timeline |

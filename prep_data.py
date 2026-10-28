@@ -43,6 +43,28 @@ def rows(f): return {r['id']:r for r in csv.DictReader(open(R+'data/'+f))}
 gj=json.load(open(R+'geojson/tunisia-governorates-medium.geojson'))
 gr=rows('governorates.csv')
 gnb=neighbors(gj['features'])
+# coastline / land borders from the country outline (shared vertices)
+K5=lambda p:(round(p[0],5),round(p[1],5))
+cgeo=json.load(open(R+'geojson/tunisia-country-medium.geojson'))['features'][0]['geometry']['coordinates']
+main=max(cgeo,key=lambda p:len(p[0]))[0]; n=len(main)-1
+near=lambda lon,lat:min(range(n),key=lambda i:(main[i][0]-lon)**2+(main[i][1]-lat)**2)
+a,b=near(8.64,36.95),near(11.56,33.17); sth=min(range(n),key=lambda i:main[i][1])
+def arc(i,j):
+    out=[i]
+    while out[-1]!=j: out.append((out[-1]+1)%n)
+    return out
+A1,A2=arc(a,b),arc(b,a)
+land,coast=(A1,A2) if sth in A1 else (A2,A1)
+k=land.index(sth); alg=set(K5(main[i]) for i in land[:k+1]); lib=set(K5(main[i]) for i in land[k:])
+coastset=set(K5(main[i]) for i in coast[3:-3])
+for poly in cgeo:
+    if poly[0] is not main: coastset|=set(K5(p) for p in poly[0])
+def vset(geom):
+    s=set()
+    for poly in rings(geom):
+        for r in poly: s|=set(K5(p) for p in r)
+    return s
+GEO={f['properties']['id']:vset(f['geometry']) for f in gj['features']}
 govs=[]
 for f in gj['features']:
     i=f['properties']['id']; r=gr[i]
@@ -50,7 +72,8 @@ for f in gj['features']:
     govs.append(dict(id=i,en=r['name_en'],fr=r['name_fr'],ar=r['name_ar'],cap=r['capital_fr'],capAr=r['capital_ar'],
         region=r['region'],district=r['district'],p14=int(r['population_2014']),p24=int(r['population_2024']),
         area=float(r['area_km2']),lon=float(r['label_lon']),lat=float(r['label_lat']),lx=lx,ly=ly,
-        nb=sorted(gnb[i]),d=path(f['geometry']),bb=bbox(f['geometry'])))
+        nb=sorted(gnb[i]),d=path(f['geometry']),bb=bbox(f['geometry']),
+        coast=len(GEO[i]&coastset)>=3, border=[c for c,S in (('DZ',alg),('LY',lib)) if len(GEO[i]&S)>=3]))
 dj=json.load(open(R+'geojson/tunisia-delegations-low.geojson'))
 dr=rows('delegations.csv')
 dnb=neighbors(dj['features'])
@@ -61,6 +84,7 @@ for f in dj['features']:
     dels.append(dict(id=i,g=r['governorate'],en=r['name_en'],fr=r['name_fr'],ar=r['name_ar'],
         p24=int(r['population_2024'] or 0),p14=int(r['population_2014'] or 0),area=float(r['area_km2']),
         lon=float(r['label_lon']),lat=float(r['label_lat']),lx=lx,ly=ly,nb=sorted(dnb[i]),d=path(f['geometry'])))
+for g in govs: g['ndel']=sum(1 for d in dels if d['g']==g['id'])
 cj=json.load(open(R+'geojson/tunisia-country-medium.geojson'))
 country=path(cj['features'][0]['geometry']); cbb=bbox(cj['features'][0]['geometry'])
 regions=[dict(id=r['id'],en=r['name_en'],fr=r['name_fr'],ar=r['name_ar'],govs=r['governorates'].split()) for r in csv.DictReader(open(R+'data/regions.csv'))]
