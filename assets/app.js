@@ -181,6 +181,40 @@ function footer() { return `<footer class="foot"><p>${t('credit')}</p><p><a href
 function dayPicker(game, day, max) { return `<div class="daypick"><a class="btn ghost sm ${day <= 1 ? 'dis' : ''}" href="#${game}-${day - 1}">‹</a><span>${t('puzzle')} #${day}</span><a class="btn ghost sm ${day >= max ? 'dis' : ''}" href="#${game}-${day + 1}">›</a></div>`; }
 function hearts(n, max) { return `<span class="hearts" aria-label="${n} lives">${'<i class="h on"></i>'.repeat(Math.max(0, n))}${'<i class="h"></i>'.repeat(Math.max(0, max - n))}</span>`; }
 
+/* ---------- shared statistics (Vercel /api/stats + Upstash Redis; silently off elsewhere) ---------- */
+const STATS_URL = 'api/stats';
+const PID = (() => { let p = LS.get('pid'); if (!p) { p = Math.random().toString(36).slice(2) + Date.now().toString(36); LS.set('pid', p); } return p; })();
+async function statsGet(game, day) { try { const r = await fetch(`${STATS_URL}?game=${encodeURIComponent(game)}&day=${day}`, { cache: 'no-store' }); if (!r.ok) return null; const j = await r.json(); return typeof j.n === 'number' ? j : null; } catch (e) { return null; } }
+async function statsPost(game, day, v) {
+  const once = day !== 'all', k = 'sent:' + game + ':' + day;
+  if (once && LS.get(k)) return statsGet(game, day);
+  try { const r = await fetch(STATS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game, day, v, pid: once ? PID : PID + Date.now().toString(36) }) }); if (!r.ok) return null; if (once) LS.set(k, true); const j = await r.json(); return typeof j.n === 'number' ? j : null; } catch (e) { return null; }
+}
+const nfmt = n => fmt(n);
+function pctBetter(hist, v, better) { let worse = 0, n = 0; for (const [k, c] of Object.entries(hist)) { const x = +k; n += c; if (better === 'low' ? x > v : x < v) worse += c; } return n > 1 ? Math.round(100 * worse / (n - 1)) : null; }
+function histBars(hist, v, cap, failAt) {
+  const b = {}; Object.entries(hist).forEach(([k, c]) => { let x = +k; if (failAt && x >= failAt) x = 'X'; else if (x >= cap) x = cap + '+'; b[x] = (b[x] || 0) + c; });
+  const keysA = [...Array(cap - 1)].map((_, i) => String(i + 1)).concat(failAt ? ['X'] : [cap + '+']);
+  const mine = failAt && v >= failAt ? 'X' : v >= cap ? cap + '+' : String(v); const mx = Math.max(1, ...Object.values(b));
+  return `<div class="hbars">${keysA.map(k => `<div class="hb ${k === mine ? 'me' : ''}"><span>${k}</span><i style="--w:${((b[k] || 0) / mx * 100).toFixed(1)}%"></i><b>${nfmt(b[k] || 0)}</b></div>`).join('')}</div>`;
+}
+// render the post-game line into el. better: 'low' (fewer is better) | 'high'
+function statBlock(el, game, day, v, better, o = {}) {
+  if (!el) return;
+  statsPost(game, day, v).then(s => {
+    if (!s || !s.n) return;
+    const p = pctBetter(s.hist, v, better);
+    const who = day === 'all' ? L({ en: 'games played', fr: 'parties jouées', ar: 'جولة لُعبت' }) : L({ en: 'players today', fr: 'joueurs aujourd\'hui', ar: 'لاعب اليوم' });
+    let line = p == null ? L({ en: 'You are the first to finish! 🥇', fr: 'Tu es le premier à finir ! 🥇', ar: 'أنت أوّل من أنهى! 🥇' })
+      : o.failed ? L({ en: `${p}% of players also missed or took more guesses.`, fr: `${p} % des joueurs ont aussi raté ou mis plus d'essais.`, ar: `${p}% من اللاعبين أخطؤوا أيضاً أو احتاجوا محاولات أكثر.` })
+      : better === 'low' ? L({ en: `You found it faster than ${p}% of players.`, fr: `Tu as trouvé plus vite que ${p} % des joueurs.`, ar: `وجدتها أسرع من ${p}% من اللاعبين.` })
+      : L({ en: `You did better than ${p}% of ${day === 'all' ? 'games' : 'players'}.`, fr: `Tu as fait mieux que ${p} % des ${day === 'all' ? 'parties' : 'joueurs'}.`, ar: `أداؤك أفضل من ${p}% من ${day === 'all' ? 'الجولات' : 'اللاعبين'}.` });
+    el.innerHTML = `<p class="gs-n">🌍 <b>${nfmt(s.n)}</b> ${who}</p><p class="gs-p">${line}</p>${o.bars ? histBars(s.hist, v, o.bars, o.failAt) : ''}`;
+    el.hidden = false;
+  });
+}
+function liveCount(el, game, day, txt) { if (!el) return; statsGet(game, day).then(s => { if (s && s.n) { el.innerHTML = `🌍 <b>${nfmt(s.n)}</b> ${L(txt)}`; el.hidden = false; } }); }
+
 /* ---------- autocomplete input ---------- */
 function acInput(root, list, onSubmit, placeholder) {
   root.innerHTML = `<form class="ac" autocomplete="off"><input id="ac-in" type="text" placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}"><button class="btn primary" type="submit">${t('guess')}</button><ul class="ac-list" hidden></ul></form>`;
@@ -252,12 +286,13 @@ function dle(cfg) {
   if (st.guesses.some(id => !cfg.byId(id))) st = { guesses: [], done: false, bonus: null };
   const body = shell(cfg.id, cfg.title, cfg.ar, L(cfg.sub), `
     ${dayPicker(cfg.id, day, TODAY)}
-    <div class="dle-top"><div class="inbox"></div><p class="dle-count"></p><div class="hints"></div></div>
+    <div class="dle-top"><div class="inbox"></div><p class="dle-live" hidden></p><p class="dle-count"></p><div class="hints"></div></div>
     <div class="gridwrap"><table class="dle"><thead><tr>${['', ...cfg.cols.map(c => L(c.head))].map(h => `<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody></tbody></table></div>
     <div class="legend">${['ok', 'part', 'no', 'up', 'down'].map(k => `<span><i class="sw ${k}"></i>${L(LEG[k])}</span>`).join('')}</div>
     <div class="after"></div>`);
   const tb = $('tbody', body), inbox = $('.inbox', body), after = $('.after', body), hints = $('.hints', body), count = $('.dle-count', body);
   const save = () => LS.set(key + ':state', st);
+  liveCount($('.dle-live', body), cfg.id, day, { en: 'people already found it', fr: 'personnes ont déjà trouvé', ar: 'شخصاً وجدوها' });
   const cell = (c, g, i, fresh) => { const r = c.cell(g, target); return `<td class="cl ${r.cls} ${r.arrow ? 'ar-' + r.arrow : ''} ${fresh ? 'flip' : ''}" style="--i:${i + 1}"><span>${esc(r.txt)}</span></td>`; };
   function rowHTML(id, fresh) { const g = cfg.byId(id); return `<tr><th scope="row" class="cl who ${id === target.id ? 'ok' : ''} ${fresh ? 'flip' : ''}" style="--i:0">${cfg.face(g)}<span>${esc(cfg.label(g))}</span></th>${cfg.cols.map((c, i) => cell(c, g, i, fresh)).join('')}</tr>`; }
   function drawHints() {
@@ -276,7 +311,8 @@ function dle(cfg) {
   function end() {
     if (after.dataset.done) return; after.dataset.done = 1;
     const sh = shareBtn(shareText);
-    after.innerHTML = `<div class="result win"><p class="rt">${t('won')} · ${st.guesses.length} ${L({ en: 'guesses', fr: 'essais', ar: 'محاولات' })}</p><h2>${esc(cfg.label(target))} <span lang="ar">${esc(cfg.alt(target))}</span></h2>${cfg.reveal(target, day)}</div>${cfg.bonus ? '<div class="bonusbox"></div>' : ''}<div class="actions">${sh.html}</div>`;
+    after.innerHTML = `<div class="result win"><p class="rt">${t('won')} · ${st.guesses.length} ${L({ en: 'guesses', fr: 'essais', ar: 'محاولات' })}</p><h2>${esc(cfg.label(target))} <span lang="ar">${esc(cfg.alt(target))}</span></h2>${cfg.reveal(target, day)}<div class="gstats" hidden></div></div>${cfg.bonus ? '<div class="bonusbox"></div>' : ''}<div class="actions">${sh.html}</div>`;
+    statBlock($('.gstats', after), cfg.id, day, st.guesses.length, 'low', { bars: 8 });
     sh.bind(after); if (cfg.bonus) cfg.bonus($('.bonusbox', after), target, st, save, () => $$('[data-share]', after).forEach(b => b.onclick = () => copy(shareText(), b)));
     after.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
@@ -374,9 +410,10 @@ function chkoun(day) {
   const kindTxt = M.kind === 'person' ? L({ en: 'Mystery person', fr: 'Personnalité mystère', ar: 'شخصية غامضة' }) : L({ en: 'Mystery place', fr: 'Lieu mystère', ar: 'مكان غامض' });
   const body = shell('chkoun', 'Chkoun?', 'شكون؟', L({ en: 'One mystery, five clues. Each wrong guess reveals the next clue. Where is it from?', fr: 'Un mystère, cinq indices. Chaque erreur dévoile l\'indice suivant. D\'où ça vient ?', ar: 'لغز واحد وخمسة تلميحات. كل خطأ يكشف التلميح التالي. من أين أصله؟' }), `
     ${dayPicker('chkoun', day, TODAY)}
-    <div class="story"><p class="kind">${kindTxt} #${day}</p><ol class="clues"></ol>${LANG === 'ar' ? `<p class="note">${t('factLang')}</p>` : ''}</div>
+    <p class="dle-live" hidden></p><div class="story"><p class="kind">${kindTxt} #${day}</p><ol class="clues"></ol>${LANG === 'ar' ? `<p class="note">${t('factLang')}</p>` : ''}</div>
     <div class="mapwrap"></div><div class="pickbar"></div><div class="after"></div>`);
   const mw = $('.mapwrap', body), bar = $('.pickbar', body), after = $('.after', body), ol = $('.clues', body);
+  liveCount($('.dle-live', body), 'chkoun', day, { en: 'people played this mystery', fr: 'personnes ont joué ce mystère', ar: 'شخصاً لعبوا هذا اللغز' });
   let sel = null;
   const save = () => LS.set(key + ':state', st);
   function draw() {
@@ -391,8 +428,8 @@ function chkoun(day) {
   }
   function end() {
     const sh = shareBtn(() => `Chkoun? #${day} ${st.won ? st.guesses.length : 'X'}/${MAX}\n${st.guesses.map(id => id === M.g ? '🟩' : '🟥').join('')}${'⬜'.repeat(MAX - st.guesses.length)}\n${link('chkoun-' + day)}`);
-    after.innerHTML = `<div class="result ${st.won ? 'win' : 'lose'}"><p class="rt">${st.won ? t('won') : t('lost')}</p><h2>${esc(M.name)}</h2><p>${esc(M['born_' + LANG] || M.born_fr || M.born_en)} · ${esc(nm(G[M.g]))}</p></div><div class="actions">${sh.html}</div>`;
-    sh.bind(after);
+    after.innerHTML = `<div class="result ${st.won ? 'win' : 'lose'}"><p class="rt">${st.won ? t('won') : t('lost')}</p><h2>${esc(M.name)}</h2><p>${esc(M['born_' + LANG] || M.born_fr || M.born_en)} · ${esc(nm(G[M.g]))}</p><div class="gstats" hidden></div></div><div class="actions">${sh.html}</div>`;
+    sh.bind(after); statBlock($('.gstats', after), 'chkoun', day, st.won ? st.guesses.length : 6, 'low', { bars: 6, failAt: 6, failed: !st.won });
   }
   draw();
 }
@@ -453,10 +490,10 @@ function ghouss(day) {
   function end() {
     const tot = total(); const bars = '▁▂▃▄▅▆▇█';
     const sh = shareBtn(() => `🤿 Ghouss #${day} · ${tot} m\n${st.ans.map(a => a ? bars[Math.min(7, Math.floor(a.depth / 12.6))] : '·').join('')}\n${link('ghouss-' + day)}`);
-    after.innerHTML = `<div class="result win"><p class="rt">${t('depth')}</p><h2>${tot} m</h2></div>
+    after.innerHTML = `<div class="result win"><p class="rt">${t('depth')}</p><h2>${tot} m</h2><div class="gstats" hidden></div></div>
       <details class="deep"><summary>${t('deepest')}</summary><ul>${P.map(p => { const id = p.order[p.order.length - 1]; return `<li><span>${esc(p.txt)}</span><b>${esc(nm(G[id] || D[id]))}</b></li>`; }).join('')}</ul></details>
       <div class="actions">${sh.html}</div>`;
-    sh.bind(after);
+    sh.bind(after); statBlock($('.gstats', after), 'ghouss', day, tot, 'high');
   }
   draw();
 }
@@ -514,8 +551,8 @@ function tarikh(arg) {
   function end() {
     const s = st.marks.filter(Boolean).length;
     const sh = shareBtn(() => `📜 Tarikh ${mode === 'daily' ? '#' + day : '∞'} · ${s}${mode === 'daily' ? '/' + (N - 1) : ''}\n${st.marks.map(m => m ? '🟩' : '🟥').join('')}\n${link(mode === 'daily' ? 'tarikh-' + day : 'tarikh-endless')}`);
-    after.innerHTML = `<div class="result ${st.lives > 0 ? 'win' : 'lose'}"><p class="rt">${t('score')}</p><h2>${s}${mode === 'daily' ? ' / ' + (N - 1) : ''}</h2></div><div class="actions">${sh.html}${mode === 'endless' ? `<button class="btn" id="tk-again">${t('again')}</button>` : ''}</div>`;
-    sh.bind(after); if (mode === 'endless') $('#tk-again').onclick = () => tarikh('endless');
+    after.innerHTML = `<div class="result ${st.lives > 0 ? 'win' : 'lose'}"><p class="rt">${t('score')}</p><h2>${s}${mode === 'daily' ? ' / ' + (N - 1) : ''}</h2><div class="gstats" hidden></div></div><div class="actions">${sh.html}${mode === 'endless' ? `<button class="btn" id="tk-again">${t('again')}</button>` : ''}</div>`;
+    sh.bind(after); if (mode === 'endless') $('#tk-again').onclick = () => tarikh('endless'); else statBlock($('.gstats', after), 'tarikh', day, s, 'high');
   }
   draw();
 }
@@ -608,8 +645,8 @@ function blitz(mode) {
     if (mode === 'gov') GOVS.filter(g => !found.has(g.id)).forEach(g => setCls(mw, g.id, 'bad'));
     const left_ = mode === 'gov' ? GOVS.filter(g => !found.has(g.id)).map(g => nm(g)) : missed.map(nameOf);
     const sh = shareBtn(() => `⚡ Blitz ${mode === 'gov' ? L({ en: 'governorates', fr: 'gouvernorats', ar: 'ولايات' }) : L({ en: 'delegations', fr: 'délégations', ar: 'معتمديات' })}: ${won ? '🏆' : '⏱'} ${score}/${GOAL}${won ? ` ${L({ en: 'in', fr: 'en', ar: 'في' })} ${used}s` : ''} (${miss} ✗)\n${link(mode === 'gov' ? 'blitz' : 'blitz-del')}`);
-    after.innerHTML = `<div class="result ${won ? 'win' : 'lose'}"><p class="rt">${won ? L({ en: 'You won', fr: 'Victoire', ar: 'فوز' }) : L({ en: 'You lost', fr: 'Défaite', ar: 'خسارة' })}</p><h2>${score} / ${GOAL}</h2><p>${won ? L({ en: `All found in ${used} s with ${miss} mistake(s).`, fr: `Tout trouvé en ${used} s avec ${miss} erreur(s).`, ar: `وجدتها كلها في ${used} ث مع ${miss} خطأ.` }) : L({ en: `${GOAL - score} left to find.`, fr: `Il en restait ${GOAL - score} à trouver.`, ar: `بقي ${GOAL - score} لم تجدها.` })} ${t('best')}: ${Math.max(b, score)}</p>${!won && left_.length ? `<p class="missed"><b>${L({ en: mode === 'gov' ? 'Not found (in red on the map):' : 'Missed:', fr: mode === 'gov' ? 'Non trouvés (en rouge sur la carte) :' : 'Ratées :', ar: mode === 'gov' ? 'لم تجدها (بالأحمر على الخريطة):' : 'أخطأتها:' })}</b> ${left_.map(esc).join(' · ')}</p>` : ''}</div><div class="actions">${sh.html}<button class="btn" id="bz-again">${t('again')}</button></div>`;
-    sh.bind(after); $('#bz-again').onclick = () => blitz(mode); after.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    after.innerHTML = `<div class="result ${won ? 'win' : 'lose'}"><p class="rt">${won ? L({ en: 'You won', fr: 'Victoire', ar: 'فوز' }) : L({ en: 'You lost', fr: 'Défaite', ar: 'خسارة' })}</p><h2>${score} / ${GOAL}</h2><p>${won ? L({ en: `All found in ${used} s with ${miss} mistake(s).`, fr: `Tout trouvé en ${used} s avec ${miss} erreur(s).`, ar: `وجدتها كلها في ${used} ث مع ${miss} خطأ.` }) : L({ en: `${GOAL - score} left to find.`, fr: `Il en restait ${GOAL - score} à trouver.`, ar: `بقي ${GOAL - score} لم تجدها.` })} ${t('best')}: ${Math.max(b, score)}</p>${!won && left_.length ? `<p class="missed"><b>${L({ en: mode === 'gov' ? 'Not found (in red on the map):' : 'Missed:', fr: mode === 'gov' ? 'Non trouvés (en rouge sur la carte) :' : 'Ratées :', ar: mode === 'gov' ? 'لم تجدها (بالأحمر على الخريطة):' : 'أخطأتها:' })}</b> ${left_.map(esc).join(' · ')}</p>` : ''}<div class="gstats" hidden></div></div><div class="actions">${sh.html}<button class="btn" id="bz-again">${t('again')}</button></div>`;
+    sh.bind(after); statBlock($('.gstats', after), mode === 'gov' ? 'blitz' : 'blitz-del', 'all', score, 'high'); $('#bz-again').onclick = () => blitz(mode); after.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 
@@ -650,8 +687,8 @@ function akthar(mode) {
   }
   function end() {
     const sh = shareBtn(() => `📊 Akthar walla Aqal (${L(M.lab)}): ${streak} ${L({ en: 'in a row', fr: 'd\'affilée', ar: 'متتالية' })}\n${link('akthar' + (mode === 'pop' ? '' : '-' + mode))}`);
-    after.innerHTML = `<div class="result lose"><p class="rt">${t('gameover')}</p><h2>${t('streak')}: ${streak}</h2></div><div class="actions">${sh.html}<button class="btn" id="ak-again">${t('again')}</button></div>`;
-    sh.bind(after); $('#ak-again').onclick = () => akthar(mode);
+    after.innerHTML = `<div class="result lose"><p class="rt">${t('gameover')}</p><h2>${t('streak')}: ${streak}</h2><div class="gstats" hidden></div></div><div class="actions">${sh.html}<button class="btn" id="ak-again">${t('again')}</button></div>`;
+    sh.bind(after); statBlock($('.gstats', after), 'akthar-' + mode, 'all', streak, 'high'); $('#ak-again').onclick = () => akthar(mode);
   }
   draw();
 }
