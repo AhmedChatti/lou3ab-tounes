@@ -32,7 +32,7 @@ module.exports = async (req, res) => {
     // Ghouss: count how many players gave each answer to prompt k
     if (game === 'gh-ans') {
       const pi = String(q.k || ''), a = String(q.a || '').slice(0, 48), pid = String(q.pid || '').replace(/[^a-z0-9]/gi, '').slice(0, 32);
-      if (!/^[0-6]$/.test(pi) || !/^[a-z0-9-]+$/.test(a) || !pid) return res.status(400).json({ error: 'bad answer' });
+      if (!/^[0-6]$/.test(pi) || !/^[a-z0-9-]+$/.test(a) || (req.method === 'POST' && !pid)) return res.status(400).json({ error: 'bad answer' });
       const kk = `l3b:gha:${day}:${pi}`;
       if (req.method === 'POST') {
         const [added] = await redis([['SADD', kk + ':p', pid]]);
