@@ -796,39 +796,111 @@ function akthar(mode) {
 /* =========================================================
    QUESTION FACTORY (party & challenge)
    ========================================================= */
-function makeQ(r) {
-  const types = ['sil', 'origin', 'deleg', 'hist', 'pop', 'nb', 'origin', 'sil'];
-  const ty = pick(types, r);
-  const govOpts = (ans, n = 4) => shuffle([ans, ...shuffle(GOVS.map(g => g.id).filter(id => id !== ans), r).slice(0, n - 1)], r);
-  if (ty === 'sil') { const g = pick(GOVS, r); return { html: `<p class="qq">${L({ en: 'Which governorate is this?', fr: 'Quel gouvernorat ?', ar: 'ما هذه الولاية؟' })}</p>${silhouette(g, 'sil small')}`, opts: govOpts(g.id).map(id => ({ id, label: nm(G[id]) })), ans: g.id }; }
-  if (ty === 'origin') { const o = pick(FACTS.origins, r); const a = o.g[0]; return { html: `<p class="qq">${L({ en: 'Where is it from?', fr: 'D\'où ça vient ?', ar: 'من أين؟' })}</p><h3>${esc(o[LANG] || o.fr || o.en)}</h3><p class="qs">${esc(LF(o, 'sub'))}</p>`, opts: shuffle([a, ...shuffle(GOVS.map(g => g.id).filter(id => !o.g.includes(id)), r).slice(0, 3)], r).map(id => ({ id, label: nm(G[id]) })), ans: a, why: LF(o, 'why') }; }
-  if (ty === 'deleg') { const d = pick(DELS, r); return { html: `<p class="qq">${L({ en: 'Which governorate is this delegation in?', fr: 'Dans quel gouvernorat est cette délégation ?', ar: 'في أي ولاية تقع هذه المعتمدية؟' })}</p><h3>${esc(nm(d))}</h3>`, opts: govOpts(d.g).map(id => ({ id, label: nm(G[id]) })), ans: d.g }; }
-  if (ty === 'hist') { let [x, y] = shuffle(HIST.map((h, i) => i), r); while (Math.floor(HIST[x].y) === Math.floor(HIST[y].y)) y = (y + 1) % HIST.length; const tl = h => h[LANG] || h.fr; const first = HIST[x].y < HIST[y].y ? x : y; return { html: `<p class="qq">${L({ en: 'Which came first?', fr: 'Lequel est arrivé en premier ?', ar: 'أيهما حدث أوّلاً؟' })}</p>`, opts: [x, y].map(i => ({ id: 'h' + i, label: tl(HIST[i]) })), ans: 'h' + first, why: `${tl(HIST[x])}: ${yearTxt(HIST[x].y)} · ${tl(HIST[y])}: ${yearTxt(HIST[y].y)}` }; }
-  if (ty === 'pop') { const [x, y] = shuffle(GOVS, r); const big = x.p24 > y.p24 ? x : y; return { html: `<p class="qq">${L({ en: 'Which has more people (2024)?', fr: 'Lequel est le plus peuplé (2024) ?', ar: 'أيهما أكثر سكاناً (2024)؟' })}</p>`, opts: [x, y].map(g => ({ id: g.id, label: nm(g) })), ans: big.id, why: `${nm(x)}: ${fmt(x.p24)} · ${nm(y)}: ${fmt(y.p24)}` }; }
-  const g = pick(GOVS.filter(g => g.nb.length < 6), r); const a = pick(g.nb, r); const wrong = shuffle(GOVS.map(x => x.id).filter(id => id !== g.id && !g.nb.includes(id)), r).slice(0, 3);
-  return { html: `<p class="qq">${L({ en: 'Which one borders', fr: 'Lequel est voisin de', ar: 'أيّها يجاور' })}</p><h3>${esc(nm(g))}?</h3>`, opts: shuffle([a, ...wrong], r).map(id => ({ id, label: nm(G[id]) })), ans: a };
+const PB = window.PARTY || { who: {}, quotes: [], books: [], places: [] };
+const QT = { en: 'Who said it?', fr: 'Qui a dit ça ?', ar: 'من قال هذا؟' };
+function makeQ(r, seen = new Set()) {
+  const W = { quote: 4, book: 1, place: 2, placeg: 1, known: 2, born: 1, year: 1, hist: 1, close: 1, origin: 1, deleg: 1, sil: 1, nb: 1 };
+  const bag = Object.entries(W).flatMap(([k, n]) => Array(n).fill(k));
+  const govOpts = (ans, excl = [ans], n = 4) => shuffle([ans, ...shuffle(GOVS.map(g => g.id).filter(id => !excl.includes(id)), r).slice(0, n - 1)], r).map(id => ({ id, label: nm(G[id]) }));
+  const whoOpts = (w) => { const era = PB.who[w].era; const pool = Object.keys(PB.who).filter(k => k !== w && PB.who[k].era === era); return shuffle([w, ...shuffle(pool, r).slice(0, 3)], r).map(id => ({ id, label: L(PB.who[id]) })); };
+  const pname = p => LANG === 'ar' ? p.ar : p.name;
+  const credit = p => `<p class="credit">📷 ${esc(p.by)} · ${esc(p.lic)} · Wikimedia Commons</p>`;
+  const img = p => `<div class="qimg"><img src="${p.img}" alt="" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('err')"></div>${credit(p)}`;
+  const make = ty => {
+    if (ty === 'quote' && PB.quotes.length) { const i = Math.floor(r() * PB.quotes.length), q = PB.quotes[i]; return { key: 'q' + i, html: `<p class="qq">${L(QT)}</p><blockquote class="quote">${esc(L(q))}</blockquote>`, opts: whoOpts(q.w), ans: q.w, why: LF(q, 'why') }; }
+    if (ty === 'book' && PB.books.length) { const i = Math.floor(r() * PB.books.length), b = PB.books[i]; return { key: 'b' + i, html: `<p class="qq">${L({ en: 'Who wrote it?', fr: 'Qui l\'a écrit ?', ar: 'من كتبه؟' })}</p><h3>📖 ${esc(L(b))}</h3>`, opts: whoOpts(b.w), ans: b.w }; }
+    if (ty === 'place' && PB.places.length) { const p = pick(PB.places, r); const o = shuffle([p, ...shuffle(PB.places.filter(x => x.id !== p.id), r).slice(0, 3)], r); return { key: 'pl' + p.id, img: p.img, html: `<p class="qq">${L({ en: 'What is this place?', fr: 'Quel est ce lieu ?', ar: 'ما هذا المكان؟' })}</p>${img(p)}`, opts: o.map(x => ({ id: x.id, label: L(x) })), ans: p.id }; }
+    if (ty === 'placeg') { const ps = PB.places.filter(x => x.g); if (!ps.length) return null; const p = pick(ps, r); return { key: 'pl' + p.id, img: p.img, html: `<p class="qq">${L({ en: 'In which governorate is this?', fr: 'Dans quel gouvernorat est-ce ?', ar: 'في أي ولاية يوجد هذا؟' })}</p>${img(p)}`, opts: govOpts(p.g), ans: p.g, why: L(p) }; }
+    if (ty === 'known') { const P = window.PEOPLE.filter(p => LF(p, 'k')); const p = pick(P, r); let pool = P.filter(x => x.id !== p.id && x.field === p.field); if (pool.length < 3) pool = P.filter(x => x.id !== p.id); const o = shuffle([p, ...shuffle(pool, r).slice(0, 3)], r); return { key: 'k' + p.id, html: `<p class="qq">${L({ en: 'Who is it?', fr: 'Qui est-ce ?', ar: 'من هو؟' })}</p><h3>${esc(LF(p, 'k'))}</h3>`, opts: o.map(x => ({ id: x.id, label: pname(x) })), ans: p.id }; }
+    if (ty === 'born') { const p = pick(window.PEOPLE.filter(p => G[p.g] && p.field !== 'history'), r); return { key: 'bo' + p.id, html: `<p class="qq">${L({ en: 'In which governorate was this person born?', fr: 'Dans quel gouvernorat est né(e)…', ar: 'في أي ولاية وُلد(ت)…' })}</p><h3>${esc(pname(p))}</h3><p class="qs">${esc(LF(p, 'k') || '')}</p>`, opts: govOpts(p.g), ans: p.g }; }
+    if (ty === 'year') { const ev = HIST.map((h, i) => i).filter(i => HIST[i].y > 0); const i = pick(ev, r), h = HIST[i], y = Math.floor(h.y); const ys = new Set([y]); while (ys.size < 4) { const d = (2 + Math.floor(r() * 40)) * (r() < .5 ? -1 : 1); if (y + d > 0 && y + d <= 2026) ys.add(y + d); } return { key: 'y' + i, html: `<p class="qq">${L({ en: 'In which year?', fr: 'En quelle année ?', ar: 'في أي سنة؟' })}</p><h3>${esc(h[LANG] || h.fr)}</h3>`, opts: [...ys].sort((a, b) => a - b).map(v => ({ id: 'y' + v, label: String(v) })), ans: 'y' + y, why: LF(h, 'd') }; }
+    if (ty === 'hist') { const ix = HIST.map((h, i) => i); for (let k = 0; k < 40; k++) { const [x, y] = shuffle(ix, r); const d = Math.abs(HIST[x].y - HIST[y].y); if (d >= 1 && d <= 250) { const tl = h => h[LANG] || h.fr; const first = HIST[x].y < HIST[y].y ? x : y; return { key: 'h' + Math.min(x, y) + '-' + Math.max(x, y), html: `<p class="qq">${L({ en: 'Which came first?', fr: 'Lequel est arrivé en premier ?', ar: 'أيهما حدث أوّلاً؟' })}</p>`, opts: [x, y].map(i => ({ id: 'h' + i, label: tl(HIST[i]) })), ans: 'h' + first, why: `${tl(HIST[x])}: ${yearTxt(HIST[x].y)} · ${tl(HIST[y])}: ${yearTxt(HIST[y].y)}` }; } } return null; }
+    if (ty === 'close') { const m = r() < .5 ? 'p24' : 'area'; for (let k = 0; k < 60; k++) { const [x, y] = shuffle(GOVS, r); const ratio = Math.max(x[m], y[m]) / Math.min(x[m], y[m]); if (ratio > 1.02 && ratio < 1.22) { const big = x[m] > y[m] ? x : y; const u = m === 'area' ? ' km²' : ''; return { key: 'c' + m + [x.id, y.id].sort(), html: `<p class="qq">${m === 'area' ? L({ en: 'Which one is bigger?', fr: 'Lequel est le plus grand ?', ar: 'أيهما أكبر مساحة؟' }) : L({ en: 'Which has more people (2024)? Close one!', fr: 'Lequel est le plus peuplé (2024) ? C\'est serré !', ar: 'أيهما أكثر سكاناً (2024)؟ الفرق صغير!' })}</p>`, opts: [x, y].map(g => ({ id: g.id, label: nm(g) })), ans: big.id, why: `${nm(x)}: ${fmt(x[m])}${u} · ${nm(y)}: ${fmt(y[m])}${u}` }; } } return null; }
+    if (ty === 'origin') { const o = pick(FACTS.origins, r); const a = o.g[0]; return { key: 'o' + (o.en || o.fr), html: `<p class="qq">${L({ en: 'Where is it from?', fr: 'D\'où ça vient ?', ar: 'من أين؟' })}</p><h3>${esc(o[LANG] || o.fr || o.en)}</h3><p class="qs">${esc(LF(o, 'sub'))}</p>`, opts: govOpts(a, o.g), ans: a, why: LF(o, 'why') }; }
+    if (ty === 'deleg') { const d = pick(DELS, r); return { key: 'd' + d.id, html: `<p class="qq">${L({ en: 'Which governorate is this delegation in?', fr: 'Dans quel gouvernorat est cette délégation ?', ar: 'في أي ولاية تقع هذه المعتمدية؟' })}</p><h3>${esc(nm(d))}</h3>`, opts: govOpts(d.g), ans: d.g }; }
+    if (ty === 'sil') { const g = pick(GOVS, r); return { key: 's' + g.id, html: `<p class="qq">${L({ en: 'Which governorate is this?', fr: 'Quel gouvernorat ?', ar: 'ما هذه الولاية؟' })}</p>${silhouette(g, 'sil small')}`, opts: govOpts(g.id), ans: g.id }; }
+    const g = pick(GOVS.filter(g => g.nb.length < 6), r); const a = pick(g.nb, r);
+    return { key: 'n' + g.id + a, html: `<p class="qq">${L({ en: 'Which one borders', fr: 'Lequel est voisin de', ar: 'أيّها يجاور' })}</p><h3>${esc(nm(g))}?</h3>`, opts: govOpts(a, [g.id, ...g.nb]), ans: a };
+  };
+  for (let k = 0; k < 30; k++) { const q = make(pick(bag, r)); if (q && !seen.has(q.key)) { seen.add(q.key); return q; } }
+  return make('deleg');
 }
+const makeQs = (r, n) => { const seen = new Set(); const Q = Array.from({ length: n }, () => makeQ(r, seen)); Q.forEach(q => { if (q.img) { const im = new Image(); im.referrerPolicy = 'no-referrer'; im.src = q.img; } }); return Q; };
 function askQ(root, q, secs, cb) {
-  root.innerHTML = `<div class="qbox">${q.html}<div class="timer"><i style="animation-duration:${secs}s"></i></div><div class="opts">${q.opts.map(o => `<button class="opt" data-id="${o.id}">${esc(o.label)}</button>`).join('')}</div><div class="qfb"></div></div>`;
-  let over = false; const to = setTimeout(() => fin(null), secs * 1000);
+  root.innerHTML = `<div class="qbox">${q.html}<div class="timer"><i style="animation-duration:${secs}s"></i></div><div class="opts ${q.opts.length === 2 ? 'two' : ''}">${q.opts.map(o => `<button class="opt" data-id="${o.id}">${esc(o.label)}</button>`).join('')}</div><div class="qfb"></div></div>`;
+  let over = false; const t0 = Date.now(); const to = setTimeout(() => fin(null), secs * 1000);
   function fin(id) {
     if (over) return; over = true; clearTimeout(to); const ok = id === q.ans;
     $$('.opt', root).forEach(b => { b.disabled = true; if (b.dataset.id === q.ans) b.classList.add('good'); else if (b.dataset.id === id) b.classList.add('bad'); });
-    $('.timer i', root).style.animationPlayState = 'paused';
+    const ti = $('.timer i', root); if (ti) ti.style.animationPlayState = 'paused';
     $('.qfb', root).innerHTML = `<b class="${ok ? 'good' : 'bad'}">${id == null ? t('timeUp') : ok ? t('correct') : t('wrong')}</b>${q.why ? ' ' + esc(q.why) : ''}`;
-    cb(ok);
+    cb(ok, Math.max(0, 1 - (Date.now() - t0) / (secs * 1000)));
   }
   $$('.opt', root).forEach(b => b.onclick = () => fin(b.dataset.id));
+  return { cancel: () => { over = true; clearTimeout(to); } };
 }
 
 /* =========================================================
-   PARTY — pass and play + challenge links
+   PARTY — online rooms, pass and play, challenge links
    ========================================================= */
+const ROOM_URL = 'api/party';
+const PT = {
+  online: { en: '🌐 Online: everyone on their own phone', fr: '🌐 En ligne : chacun sur son téléphone', ar: '🌐 أونلاين: كل واحد بهاتفه' },
+  onlineTxt: { en: 'Create a room, send the link, play the same questions at the same time. The first one to finish stops the round for everybody!', fr: 'Crée une salle, envoie le lien, jouez les mêmes questions en même temps. Le premier qui finit arrête la manche pour tout le monde !', ar: 'أنشئ غرفة، أرسل الرابط، والعبوا نفس الأسئلة في نفس الوقت. أول من يُنهي يوقف الجولة للجميع!' },
+  yourName: { en: 'Your name', fr: 'Ton prénom', ar: 'اسمك' },
+  rounds: { en: 'Rounds', fr: 'Manches', ar: 'الجولات' },
+  perRound: { en: 'Questions per round', fr: 'Questions par manche', ar: 'أسئلة في كل جولة' },
+  create: { en: 'Create the room', fr: 'Créer la salle', ar: 'أنشئ الغرفة' },
+  orJoin: { en: 'Got a code?', fr: 'Tu as un code ?', ar: 'عندك رمز؟' },
+  join: { en: 'Join', fr: 'Rejoindre', ar: 'انضم' },
+  local: { en: '📱 Pass the phone', fr: '📱 Un seul téléphone', ar: '📱 هاتف واحد' },
+  invite: { en: 'Send this link to your friends', fr: 'Envoie ce lien à tes amis', ar: 'أرسل هذا الرابط لأصدقائك' },
+  waitHost: { en: 'Waiting for the host to start…', fr: 'En attente de l\'hôte…', ar: 'في انتظار المُضيف…' },
+  startGame: { en: 'Start the game', fr: 'Lancer la partie', ar: 'ابدأ اللعب' },
+  round: { en: 'Round', fr: 'Manche', ar: 'الجولة' },
+  nextRound: { en: 'Next round', fr: 'Manche suivante', ar: 'الجولة الموالية' },
+  playAgain: { en: 'Play again', fr: 'Rejouer', ar: 'العب مجدداً' },
+  roundOver: { en: 'Round over!', fr: 'Fin de la manche !', ar: 'انتهت الجولة!' },
+  finished: { en: 'finished first', fr: 'a fini en premier', ar: 'أنهى أولاً' },
+  final: { en: 'Final results', fr: 'Résultats finaux', ar: 'النتائج النهائية' },
+  pts: { en: 'pts', fr: 'pts', ar: 'نقطة' },
+  total: { en: 'Total', fr: 'Total', ar: 'المجموع' },
+  thisRound: { en: 'This round', fr: 'Cette manche', ar: 'هذه الجولة' },
+  noRoom: { en: 'This room does not exist or has expired.', fr: 'Cette salle n\'existe pas ou a expiré.', ar: 'هذه الغرفة غير موجودة أو انتهت صلاحيتها.' },
+  offline: { en: 'Connection problem, retrying…', fr: 'Problème de connexion, nouvel essai…', ar: 'مشكل في الاتصال، إعادة المحاولة…' },
+  you: { en: 'you', fr: 'toi', ar: 'أنت' },
+  host: { en: 'host', fr: 'hôte', ar: 'المُضيف' },
+  waitOthers: { en: 'Waiting for the others…', fr: 'En attente des autres…', ar: 'في انتظار الآخرين…' },
+};
+const pt = k => L(PT[k]);
+async function roomApi(body) {
+  const r = await fetch(body ? ROOM_URL : ROOM_URL + '?code=' + encodeURIComponent(roomApi.code), body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ pid: PID, code: roomApi.code }, body)) } : { cache: 'no-store' });
+  if (r.status === 404) return { missing: true };
+  if (!r.ok) throw new Error('room ' + r.status);
+  return r.json();
+}
 function party() {
   let names = LS.get('party:names', ['Ahmed', 'Yasmine', 'Karim']);
-  const body = shell('party', 'Party', 'لمّة', L({ en: 'Pass the phone. Everyone starts with three lives; the last one standing wins.', fr: 'Faites tourner le téléphone. Trois vies chacun, le dernier en jeu gagne.', ar: 'مرّروا الهاتف. لكل لاعب ثلاث أرواح، وآخر من يبقى يفوز.' }), `
-    <div class="pset"><h3>${t('players')}</h3><div class="plist"></div><div class="prow"><button class="btn ghost" id="p-add">+ ${t('addPlayer')}</button><button class="btn primary" id="p-go">${t('start')}</button></div></div>
+  const set = LS.get('party:set', { rounds: 3, per: 10 });
+  const sel = (id, vals, v) => `<select id="${id}">${vals.map(x => `<option ${x === v ? 'selected' : ''}>${x}</option>`).join('')}</select>`;
+  const body = shell('party', 'Party', 'لمّة', L({ en: 'Quotes, heritage photos, history, people and places: play with friends.', fr: 'Citations, photos du patrimoine, histoire, personnalités et lieux : jouez entre amis.', ar: 'أقوال، صور من التراث، تاريخ، شخصيات وأماكن: العبوا مع الأصدقاء.' }), `
+    <div class="pset online"><h3>${pt('online')}</h3><p class="muted">${pt('onlineTxt')}</p>
+      <label class="fld">${pt('yourName')}<input id="o-name" maxlength="16" value="${esc(LS.get('party:me', ''))}"></label>
+      <div class="frow"><label class="fld">${pt('rounds')}${sel('o-rounds', [1, 2, 3, 4, 5], set.rounds)}</label><label class="fld">${pt('perRound')}${sel('o-per', [5, 8, 10, 15, 20], set.per)}</label></div>
+      <div class="prow"><button class="btn primary" id="o-create">${pt('create')}</button></div>
+      <div class="joinrow"><span>${pt('orJoin')}</span><input id="o-code" maxlength="4" placeholder="ABCD" autocapitalize="characters"><button class="btn" id="o-join">${pt('join')}</button></div>
+    </div>
+    <div class="pset"><h3>${pt('local')}</h3><p class="muted">${L({ en: 'Everyone starts with three lives; the last one standing wins.', fr: 'Trois vies chacun, le dernier en jeu gagne.', ar: 'لكل لاعب ثلاث أرواح، وآخر من يبقى يفوز.' })}</p><div class="plist"></div><div class="prow"><button class="btn ghost" id="p-add">+ ${t('addPlayer')}</button><button class="btn" id="p-go">${t('start')}</button></div></div>
     <div class="chal"><h3>${t('challenge')}</h3><p>${t('challengeTxt')}</p><button class="btn" id="p-chal">${t('makeChallenge')}</button><div class="chal-out"></div></div>`);
+  const myName = () => { const n = $('#o-name').value.trim(); if (!n) { $('#o-name').focus(); toast(pt('yourName'), 'bad'); return null; } LS.set('party:me', n); return n; };
+  $('#o-create').onclick = async e => {
+    const name = myName(); if (!name) return; const rounds = +$('#o-rounds').value, per = +$('#o-per').value; LS.set('party:set', { rounds, per });
+    e.target.disabled = true;
+    try { roomApi.code = ''; const s = await roomApi({ op: 'create', name, rounds, per }); if (s && s.code) { location.hash = 'salle-' + s.code; return; } } catch (err) { }
+    e.target.disabled = false; toast(pt('offline'), 'bad');
+  };
+  const join = () => { const c = $('#o-code').value.toUpperCase().replace(/[^A-Z]/g, ''); if (c.length < 4) return $('#o-code').focus(); if (!myName()) return; location.hash = 'salle-' + c; };
+  $('#o-join').onclick = join; $('#o-code').onkeydown = e => { if (e.key === 'Enter') join(); };
   const pl = $('.plist', body);
   const drawNames = () => { pl.innerHTML = names.map((n, i) => `<div class="pname"><input id="pn-${i}" value="${esc(n)}" maxlength="16" aria-label="${t('players')} ${i + 1}"><button class="btn ghost sm" data-rm="${i}" aria-label="Remove">✕</button></div>`).join(''); $$('[data-rm]', pl).forEach(b => b.onclick = () => { if (names.length > 2) { names.splice(+b.dataset.rm, 1); drawNames(); } }); $$('input', pl).forEach((inp, i) => inp.oninput = () => { names[i] = inp.value; }); };
   drawNames();
@@ -836,8 +908,105 @@ function party() {
   $('#p-chal').onclick = () => { const code = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random() * 24)]).join(''); const url = link('defi-' + code); $('.chal-out').innerHTML = `<p class="code">${code}</p><input class="copybox" id="chal-url" readonly value="${esc(url)}"><div class="actions"><button class="btn primary" id="chal-copy">${t('copyLink')}</button><a class="btn" href="#defi-${code}">${t('play')}</a></div>`; $('#chal-copy').onclick = e => copy(L({ en: `Tunisia quiz challenge ${code}: 10 questions, beat my score!`, fr: `Défi quiz Tunisie ${code} : 10 questions, bats mon score !`, ar: `تحدّي تونس ${code}: عشرة أسئلة، تغلّب على نتيجتي!` }) + '\n' + url, e.target); };
   $('#p-go').onclick = () => { names = names.map(n => n.trim()).filter(Boolean); if (names.length < 2) return toast(L({ en: 'Add at least two players', fr: 'Ajoute au moins deux joueurs', ar: 'أضف لاعبين على الأقل' }), 'bad'); LS.set('party:names', names); runParty(body, names); };
 }
+
+/* online room: #salle-CODE */
+function salle(code) {
+  code = String(code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
+  roomApi.code = code;
+  const body = shell('party', `${L({ en: 'Room', fr: 'Salle', ar: 'الغرفة' })} ${code}`, 'لمّة', pt('onlineTxt'), `<div class="room"></div>`);
+  const root = $('.room', body), hash = location.hash;
+  const alive = () => location.hash === hash && document.body.contains(root);
+  const SECS = 15;
+  let S_ = null, view = '', play = null, timer = null, busy = false;
+  const progKey = 'salle:' + code;
+  const name = LS.get('party:me', '');
+  if (!name) {
+    root.innerHTML = `<div class="pset"><label class="fld">${pt('yourName')}<input id="r-name" maxlength="16"></label><div class="prow"><button class="btn primary" id="r-join">${pt('join')}</button></div></div>`;
+    $('#r-join').onclick = () => { const n = $('#r-name').value.trim(); if (!n) return; LS.set('party:me', n); salle(code); };
+    return;
+  }
+  const players = () => Object.entries(S_.players).map(([pid, n]) => ({ pid, n }));
+  const totals = () => { const T = {}; Object.values(S_.scores).forEach(rs => Object.entries(rs).forEach(([pid, v]) => { T[pid] = (T[pid] || 0) + v.pts; })); return T; };
+  const isHost = () => S_ && S_.host === PID;
+  const pname = pid => `${esc(S_.players[pid] || '?')}${pid === PID ? ` <small>(${pt('you')})</small>` : ''}`;
+  async function poll() {
+    if (!alive()) return clearTimeout(timer);
+    try { const s = await roomApi(); if (s.missing) { root.innerHTML = `<div class="result lose"><h2>${pt('noRoom')}</h2></div><div class="actions"><a class="btn primary" href="#party">Party</a></div>`; return; } apply(s); }
+    catch (e) { const o = $('.offline', root); if (!o) root.insertAdjacentHTML('afterbegin', `<p class="offline">${pt('offline')}</p>`); }
+    timer = setTimeout(poll, 1500);
+  }
+  function apply(s) {
+    const o = $('.offline', root); if (o) o.remove();
+    S_ = s;
+    if (!s.players[PID]) { if (!busy) { busy = true; roomApi({ op: 'join', name }).then(x => { busy = false; if (x && !x.missing) apply(x); }).catch(() => busy = false); } return; }
+    const key = s.state === 'play' ? `play:${s.game}:${s.round}` : s.state === 'over' ? `over:${s.game}:${s.round}` : 'lobby';
+    if (key !== view) { if (play) { play.stop(); play = null; } view = key; render(); }
+    else if (s.state === 'lobby') lobby();
+    else if (s.state === 'play') live();
+  }
+  function render() {
+    if (S_.state === 'lobby') return lobby();
+    if (S_.state === 'play') return startPlay();
+    return results();
+  }
+  function lobby() {
+    const url = link('salle-' + code);
+    root.innerHTML = `<div class="pset lobby"><p class="muted">${pt('invite')}</p><p class="code">${code}</p><input class="copybox" readonly value="${esc(url)}"><div class="actions"><button class="btn" id="r-copy">${t('copyLink')}</button></div>
+      <p class="rset">${pt('rounds')}: <b>${S_.rounds}</b> · ${pt('perRound')}: <b>${S_.per}</b></p>
+      <h3>${t('players')} (${players().length})</h3><div class="board">${players().map(p => `<span class="pl ${p.pid === PID ? 'cur' : ''}">${pname(p.pid)}${p.pid === S_.host ? ' 👑' : ''}</span>`).join('')}</div>
+      ${isHost() ? `<button class="btn primary big" id="r-start">${pt('startGame')}</button>` : `<p class="wait">${pt('waitHost')}</p>`}</div>`;
+    $('#r-copy').onclick = e => copy(L({ en: `Join my Lou3ab Tounes party (room ${code})!`, fr: `Rejoins ma partie Lou3ab Tounes (salle ${code}) !`, ar: `انضمّ إلى لمّتي في لعب تونس (الغرفة ${code})!` }) + '\n' + url, e.target);
+    const st = $('#r-start'); if (st) st.onclick = next;
+  }
+  async function next(e) { if (e && e.target) e.target.disabled = true; try { const s = await roomApi({ op: 'next' }); if (s && !s.missing) apply(s); } catch (err) { toast(pt('offline'), 'bad'); if (e && e.target) e.target.disabled = false; } }
+  function live() {
+    const el = $('.live', root); if (!el) return;
+    const rs = S_.scores[S_.round] || {};
+    el.innerHTML = players().map(p => { const v = rs[p.pid] || { n: 0 }; return `<span class="lp ${p.pid === PID ? 'me' : ''}"><b>${esc(p.n)}</b><i style="--p:${Math.round(100 * v.n / S_.per)}%"></i><small>${v.n}/${S_.per}</small></span>`; }).join('');
+  }
+  function startPlay() {
+    const g = S_.game, r = S_.round, per = S_.per;
+    const Q = makeQs(rng(`salle:${code}:${g}:${r}`), per);
+    let pr = LS.get(progKey, null); if (!pr || pr.g !== g || pr.r !== r) pr = { g, r, i: 0, pts: 0, c: 0 };
+    let cur = null, stopped = false, nextT = null;
+    play = { stop: () => { stopped = true; clearTimeout(nextT); if (cur) cur.cancel(); } };
+    root.innerHTML = `<div class="tstat"><span>${pt('round')} ${r}/${S_.rounds}</span><span class="qi"></span><span>${t('score')} <b class="mypts">${pr.pts}</b></span></div><div class="live"></div><div class="qwrap"></div>`;
+    live();
+    const send = () => roomApi({ op: 'ans', g, r, n: pr.i, pts: pr.pts, c: pr.c }).then(s => { if (s && !s.missing) apply(s); }).catch(() => { });
+    const ask = () => {
+      if (stopped) return;
+      if (pr.i >= per) { $('.qwrap', root).innerHTML = `<p class="wait">${pt('waitOthers')}</p>`; send(); return; }
+      $('.qi', root).textContent = `${pr.i + 1}/${per}`;
+      cur = askQ($('.qwrap', root), Q[pr.i], SECS, (ok, left) => {
+        if (stopped) return;
+        pr.i++; if (ok) { pr.c++; pr.pts += 100 + Math.round(50 * left); }
+        LS.set(progKey, pr); $('.mypts', root).textContent = pr.pts; send();
+        nextT = setTimeout(ask, Q[pr.i - 1].why ? 2600 : 1500);
+      });
+    };
+    ask();
+  }
+  function results() {
+    const T = totals(), rs = S_.scores[S_.round] || {}, last = S_.round >= S_.rounds;
+    const rows = players().map(p => ({ ...p, t: T[p.pid] || 0, s: rs[p.pid] || { pts: 0, n: 0, c: 0 } })).sort((a, b) => b.t - a.t || b.s.c - a.s.c);
+    const medal = i => ['🥇', '🥈', '🥉'][i] || (i + 1);
+    const w = rows[0];
+    root.innerHTML = `<div class="result ${last ? 'win' : ''}"><p class="rt">${last ? '🏆 ' + pt('final') : pt('roundOver') + ` (${r_(S_.round)}/${S_.rounds})`}</p>
+      ${S_.over ? `<p>🏁 ${esc(S_.players[S_.over] || '?')} ${pt('finished')}</p>` : ''}
+      ${last && w ? `<h2>${esc(w.n)} ${t('wins')}</h2>` : ''}</div>
+      <table class="rtab"><thead><tr><th>#</th><th>${t('players')}</th><th>${pt('thisRound')}</th><th>${pt('total')}</th></tr></thead><tbody>
+      ${rows.map((p, i) => `<tr class="${p.pid === PID ? 'me' : ''}"><td>${medal(i)}</td><td>${pname(p.pid)}${p.pid === S_.over ? ' 🏁' : ''}</td><td>${p.s.pts} <small>${p.s.c}/${p.s.n} ✓</small></td><td><b>${p.t}</b> ${pt('pts')}</td></tr>`).join('')}</tbody></table>
+      <div class="actions">${isHost() ? `<button class="btn primary" id="r-next">${last ? pt('playAgain') : pt('nextRound')}</button>` : `<p class="wait">${pt('waitHost')}</p>`}<a class="btn ghost" href="#party">${t('back')}</a></div><div class="after"></div>`;
+    const b = $('#r-next'); if (b) b.onclick = next;
+    if (last) { const sh = shareBtn(() => `🎉 Lou3ab Tounes Party\n${rows.slice(0, 5).map((p, i) => `${medal(i)} ${p.n}: ${p.t}`).join('\n')}\n${link('party')}`); $('.after', root).innerHTML = `<div class="actions">${sh.html}</div>`; sh.bind(root); addMadeBy($('.after', root)); }
+  }
+  const r_ = x => x;
+  root.innerHTML = `<p class="wait">…</p>`;
+  poll();
+}
 function runParty(body, names) {
-  const P = names.map(n => ({ n, l: 3 })); let turn = 0, round = 1;
+  const P = names.map(n => ({ n, l: 3 })); let turn = 0;
+  const seen = new Set();
   const alive = () => P.filter(p => p.l > 0);
   const board = () => `<div class="board">${P.map((p, i) => `<span class="pl ${p.l <= 0 ? 'out' : ''} ${i === turn ? 'cur' : ''}">${esc(p.n)} ${hearts(p.l, 3)}</span>`).join('')}</div>`;
   function pass() {
@@ -848,7 +1017,7 @@ function runParty(body, names) {
   }
   function ask() {
     body.innerHTML = `${board()}<div class="qwrap"></div>`;
-    askQ($('.qwrap', body), makeQ(Math.random), 15, ok => {
+    askQ($('.qwrap', body), makeQ(Math.random, seen), 15, ok => {
       if (!ok) P[turn].l--;
       $('.qwrap', body).insertAdjacentHTML('beforeend', `<div class="actions"><button class="btn primary" id="pp-next">${t('next')}</button></div>`);
       $('.board', body).outerHTML = board();
@@ -864,7 +1033,7 @@ function runParty(body, names) {
 }
 function defi(code) {
   code = String(code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6) || 'TUNS';
-  const r = rng('defi:' + code); const Q = Array.from({ length: 10 }, () => makeQ(r));
+  const Q = makeQs(rng('defi2:' + code), 10);
   const k = 'defi:' + code; const prev = LS.get(k, null);
   const body = shell('party', `${L({ en: 'Challenge', fr: 'Défi', ar: 'تحدٍّ' })} ${code}`, 'تحدّي', t('challengeTxt'), `<div class="tstat"></div><div class="qwrap"></div><div class="after"></div>`);
   const stat = $('.tstat', body), qw = $('.qwrap', body), after = $('.after', body);
@@ -893,10 +1062,12 @@ function route() {
     case 'akthar': return akthar(a);
     case 'party': return party();
     case 'defi': return defi(a);
+    case 'salle': return salle(a);
     default: return home();
   }
 }
 applyLang();
 window.addEventListener('hashchange', route);
+window.L3B_Q = { makeQ, rng };
 route();
 })();

@@ -81,9 +81,12 @@ Each card shows an event without its date. Tap where it belongs on the timeline.
 **Higher or lower?** Does the second delegation have more or fewer inhabitants? Is this governorate bigger? Which grew faster since 2014? Plus a new theme every day. Keep your streak going as long as you can.
 
 ### 🎉 Party · لمّة
-**Play with friends.**
+**Play with friends.** Questions mix everything: *who said it?* (Hannibal, Ibn Khaldun, Farhat Hached…), *who wrote it?*, photos of Tunisian heritage (El Jem, Dougga, Ksar Ouled Soltane…), personalities, history dates, delegations and close calls.
+- **Online, everyone on their own phone:** create a room, choose the number of rounds and of questions per round, and send the link. Everybody gets the same questions at the same time; a fast right answer earns more points. **The first player to finish stops the round for everyone**, then the scoreboard shows everybody's results. The host launches the next round or a new game.
 - **Pass the phone:** 2 to 8 players, 3 lives each, 15 seconds per question. The last one standing wins.
 - **Challenge link:** create a code and send the link. Everyone who opens it gets the same 10 questions, so you can compare scores.
+
+Heritage photos come from Wikimedia Commons; the author and licence are shown under each photo.
 
 ---
 
