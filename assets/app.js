@@ -852,7 +852,10 @@ const PHIST = 'party:hist';
 const remember = Q => { const h = LS.get(PHIST, []); const s = new Set(h); Q.forEach(q => q.subj.forEach(k => { if (!s.has(k)) { s.add(k); h.push(k); } })); LS.set(PHIST, h.slice(-1200)); };
 function askQ(root, q, secs, cb) {
   root.innerHTML = `<div class="qbox">${q.html}<div class="timer"><i style="animation-duration:${secs}s"></i></div><div class="opts ${q.opts.length === 2 ? 'two' : ''}">${q.opts.map(o => `<button class="opt" data-id="${o.id}">${esc(o.label)}</button>`).join('')}</div><div class="qfb"></div></div>`;
-  let over = false; const t0 = Date.now(); const to = setTimeout(() => fin(null), secs * 1000);
+  let over = false, t0 = Date.now(), to = null;
+  const go = () => { if (over || to) return; t0 = Date.now(); const ti = $('.timer i', root); if (ti) { ti.style.animation = 'none'; void ti.offsetWidth; ti.style.animation = ''; ti.style.animationDuration = secs + 's'; ti.style.animationPlayState = 'running'; } to = setTimeout(() => fin(null), secs * 1000); };
+  const im = $('.qimg img', root);
+  if (im && !im.complete) { const ti = $('.timer i', root); if (ti) ti.style.animationPlayState = 'paused'; im.addEventListener('load', go); im.addEventListener('error', go); setTimeout(go, 4000); } else go();
   function fin(id) {
     if (over) return; over = true; clearTimeout(to); const ok = id === q.ans;
     $$('.opt', root).forEach(b => { b.disabled = true; if (b.dataset.id === q.ans) b.classList.add('good'); else if (b.dataset.id === id) b.classList.add('bad'); });

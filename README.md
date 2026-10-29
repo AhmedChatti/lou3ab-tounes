@@ -86,6 +86,8 @@ Each card shows an event without its date. Tap where it belongs on the timeline.
 - **Pass the phone:** 2 to 8 players, 3 lives each, 15 seconds per question. The last one standing wins.
 - **Challenge link:** create a code and send the link. Everyone who opens it gets the same 10 questions, so you can compare scores.
 
+**No question comes back twice in the same party**, across all its rounds and replays, and the game avoids the questions your group already played in earlier parties.
+
 Heritage photos come from Wikimedia Commons; the author and licence are shown under each photo.
 
 ---
