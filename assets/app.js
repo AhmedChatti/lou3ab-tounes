@@ -187,7 +187,7 @@ function madeBy() {
     <div class="mb-b">${ext(LINKS.me, 'LinkedIn')}${ext(LINKS.repo, '★ GitHub')}</div></div>`;
 }
 const addMadeBy = root => { if (root && !root.querySelector('.madeby')) root.insertAdjacentHTML('beforeend', madeBy()); };
-function footer() { return `<footer class="foot"><p>${ext(LINKS.map, 'Map Tunisia')} ${L({ en: 'by', fr: 'par', ar: 'لـ' })} ${ext(LINKS.alaa, 'Alaa Taieb')}</p><p>${ext(LINKS.repo, 'Lou3ab Tunisia')} ${L({ en: 'made by', fr: 'créé par', ar: 'من إنجاز' })} ${ext(LINKS.me, 'Ahmed Chatti')}</p></footer>`; }
+function footer() { return `<footer class="foot"><p>${ext(LINKS.map, 'Map Tunisia')} ${L({ en: 'by', fr: 'par', ar: 'لـ' })} ${ext(LINKS.alaa, 'Alaa Taieb')}</p><p>${ext(LINKS.repo, 'Lou3ab Tunisia')} ${L({ en: 'made by', fr: 'créé par', ar: 'من إنجاز' })} ${ext(LINKS.me, 'Ahmed Chatti')}</p><p><a href="/privacy">${L({ en: 'Privacy', fr: 'Confidentialité', ar: 'الخصوصية' })}</a></p></footer>`; }
 function dayPicker(game, day, max) { return `<div class="daypick"><a class="btn ghost sm ${day <= 1 ? 'dis' : ''}" href="#${game}-${day - 1}">‹</a><span>${t('puzzle')} #${day}</span><a class="btn ghost sm ${day >= max ? 'dis' : ''}" href="#${game}-${day + 1}">›</a></div>`; }
 function hearts(n, max) { return `<span class="hearts" aria-label="${n} lives">${'<i class="h on"></i>'.repeat(Math.max(0, n))}${'<i class="h"></i>'.repeat(Math.max(0, max - n))}</span>`; }
 
