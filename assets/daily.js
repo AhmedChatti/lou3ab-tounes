@@ -590,5 +590,140 @@ window.DAILY = {
     }
    ]
   }
+ },
+ "2026-10-30": {
+  "wilayadle": {
+   "g": "TN-34",
+   "fact_en": "Siliana’s population fell from 223,087 (2014) to 216,242 (2024): the steepest drop of any governorate.",
+   "fact_fr": "La population de Siliana est passée de 223 087 (2014) à 216 242 (2024) : la plus forte baisse de tous les gouvernorats.",
+   "fact_ar": "تراجع عدد سكان سليانة من 223087 (2014) إلى 216242 (2024)، وهو أكبر انخفاض بين كل الولايات."
+  },
+  "persondle": {
+   "name": "Khemaïs Tarnane",
+   "ar": "خميّس ترنان",
+   "sex": "M",
+   "field": "music",
+   "g": "TN-23",
+   "y": 1894,
+   "alive": false,
+   "k_en": "Malouf master, co-founder of La Rachidia (1934)",
+   "k_fr": "Maître du malouf, cofondateur de La Rachidia (1934)",
+   "k_ar": "من أعلام المالوف ومؤسسي الرشيدية (1934)"
+  },
+  "chkoun": {
+   "g": "TN-23",
+   "name": "Utica",
+   "kind": "place",
+   "clues_en": [
+    "Ancient city traditionally seen as the first Phoenician colony in North Africa.",
+    "Classical authors dated its founding to around 1100 BC.",
+    "Rome made it the capital of its new province of Africa.",
+    "Cato the Younger took his own life here in 46 BC, after Caesar’s victory at Thapsus.",
+    "Once a port, now inland due to Medjerda silt, near Ghar El Melh, about 30 km from Bizerte."
+   ],
+   "clues_fr": [
+    "Cité antique considérée par la tradition comme la première colonie phénicienne d’Afrique du Nord.",
+    "Les auteurs antiques dataient sa fondation vers 1100 av. J.-C.",
+    "Rome en fit la capitale de sa nouvelle province d’Afrique.",
+    "Caton le Jeune s’y donna la mort en 46 av. J.-C., après la victoire de César à Thapsus.",
+    "Ancien port, aujourd’hui à l’intérieur des terres (limons de la Medjerda), près de Ghar El Melh."
+   ],
+   "clues_ar": [
+    "مدينة قديمة تُعدّ تقليديًا أول مستوطنة فينيقية في شمال إفريقيا.",
+    "أرّخ الكتّاب القدامى تأسيسها بنحو سنة 1100 ق.م.",
+    "جعلتها روما عاصمة لولايتها الجديدة إفريقية.",
+    "انتحر فيها كاتو الأصغر سنة 46 ق.م بعد انتصار قيصر في ثابسوس.",
+    "كانت ميناءً وصارت داخل اليابسة بفعل طمي مجردة، قرب غار الملح، على نحو 30 كم من بنزرت."
+   ],
+   "born_en": "In the governorate of Bizerte",
+   "born_fr": "Dans le gouvernorat de Bizerte",
+   "born_ar": "في ولاية بنزرت"
+  },
+  "ghouss": [
+   {
+    "txt_en": "A Tunisian national holiday with a fixed date (not a religious one)",
+    "txt_fr": "Une fête nationale tunisienne à date fixe (hors fêtes religieuses)",
+    "txt_ar": "عيد وطني تونسي بتاريخ ثابت (غير الأعياد الدينية)",
+    "valid": [
+     "e-nouvel-an",
+     "e-revolution",
+     "e-independance",
+     "e-martyrs",
+     "e-travail",
+     "e-republique",
+     "e-femme",
+     "e-evacuation"
+    ]
+   }
+  ],
+  "tarikh": [
+   {
+    "y": 238,
+    "g": "TN-53",
+    "en": "Revolt at Thysdrus: Gordian I proclaimed emperor",
+    "fr": "Révolte de Thysdrus : Gordien Ier proclamé empereur",
+    "ar": "ثورة تيسدروس: إعلان غورديانوس الأول إمبراطورًا",
+    "d_en": "Landowners kill Maximinus’s tax procurator and acclaim the old proconsul Gordian and his son. Their reign lasts only 36 days.",
+    "d_fr": "Des propriétaires tuent le procurateur fiscal de Maximin et acclament le vieux proconsul Gordien et son fils. Leur règne ne dure que 36 jours.",
+    "d_ar": "قتل ملّاك الأراضي جابي ضرائب الإمبراطور ماكسيمينوس، ونادوا بالوالي المسنّ غورديانوس وابنه. لم يدم حكمهما سوى 36 يومًا."
+   },
+   {
+    "y": 1896,
+    "g": "TN-11",
+    "en": "The Khaldounia is founded in Tunis",
+    "fr": "Fondation de la Khaldounia à Tunis",
+    "ar": "تأسيس الجمعية الخلدونية بتونس",
+    "d_en": "On 22 December, Young Tunisians led by Béchir Sfar create Tunisia’s first modern school, to spread scientific knowledge in Arabic.",
+    "d_fr": "Le 22 décembre, les Jeunes Tunisiens menés par Béchir Sfar créent la première école moderne du pays, pour diffuser les sciences en arabe.",
+    "d_ar": "في 22 ديسمبر، أسّس الشبان التونسيون بقيادة البشير صفر أول مدرسة عصرية في البلاد لنشر العلوم باللغة العربية."
+   }
+  ],
+  "mnin": [
+   {
+    "g": [
+     "TN-81"
+    ],
+    "cat": "place",
+    "en": "The coastal oasis",
+    "fr": "L’oasis littorale",
+    "ar": "الواحة الساحلية",
+    "sub_en": "A palm grove that reaches the sea",
+    "sub_fr": "Une palmeraie qui touche la mer",
+    "sub_ar": "واحة نخيل تلامس البحر",
+    "why_en": "The Gabès oasis, on UNESCO’s tentative list since 2008, is described as the only coastal oasis of the Mediterranean.",
+    "why_fr": "L’oasis de Gabès, sur la liste indicative de l’UNESCO depuis 2008, est décrite comme l’unique oasis littorale de la Méditerranée.",
+    "why_ar": "واحة قابس، المدرجة على القائمة التمهيدية لليونسكو منذ 2008، توصف بأنها الواحة الساحلية الوحيدة في المتوسط."
+   },
+   {
+    "g": [
+     "TN-11"
+    ],
+    "cat": "sport",
+    "en": "Tarak Dhiab",
+    "fr": "Tarak Dhiab",
+    "ar": "طارق ذياب",
+    "sub_en": "African Ballon d’Or 1977",
+    "sub_fr": "Ballon d’or africain 1977",
+    "sub_ar": "أفضل لاعب إفريقي 1977",
+    "why_en": "The playmaker was born in Tunis in 1954.",
+    "why_fr": "Le meneur de jeu est né à Tunis en 1954.",
+    "why_ar": "وُلد صانع الألعاب في تونس العاصمة سنة 1954."
+   },
+   {
+    "g": [
+     "TN-42"
+    ],
+    "cat": "sport",
+    "en": "Karim Haggui",
+    "fr": "Karim Haggui",
+    "ar": "كريم الحقي",
+    "sub_en": "Tunisia national-team defender",
+    "sub_fr": "Défenseur de la sélection tunisienne",
+    "sub_ar": "مدافع المنتخب التونسي",
+    "why_en": "Born in 1984 in the Kasserine governorate.",
+    "why_fr": "Né en 1984 dans le gouvernorat de Kasserine.",
+    "why_ar": "وُلد سنة 1984 في ولاية القصرين."
+   }
+  ]
  }
 };
