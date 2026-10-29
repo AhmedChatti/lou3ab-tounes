@@ -26,7 +26,7 @@ async function state(code) {
   const sc = cmds.length ? await redis(cmds) : [];
   const scores = {};
   sc.forEach((a, i) => { const o = obj(a); scores[i + 1] = Object.fromEntries(Object.entries(o).filter(([k]) => k !== '_').map(([pid, v]) => { const [pts, n, c] = String(v).split('|').map(Number); return [pid, { pts, n, c }]; })); });
-  return { code, rounds: +meta.rounds, per: +meta.per, host: meta.host, game: g, round: cur, state: meta.state, start: +meta.start || 0, over: meta.over || null, players: obj(pl), scores, now: Date.now() };
+  return { code, rounds: +meta.rounds, per: +meta.per, host: meta.host, game: g, round: cur, state: meta.state, start: +meta.start || 0, over: meta.over || null, ex: meta.ex ? meta.ex.split(',') : [], players: obj(pl), scores, now: Date.now() };
 }
 
 module.exports = async (req, res) => {
@@ -46,7 +46,8 @@ module.exports = async (req, res) => {
         const [ok] = await redis([['HSETNX', K(c), 'host', pid]]); if (ok === 1) break; c = '';
       }
       if (!c) return res.status(500).json({ error: 'busy' });
-      await redis([['HSET', K(c), 'rounds', rounds, 'per', per, 'game', 1, 'round', 0, 'state', 'lobby'], ['HSET', K(c) + ':pl', pid, clean(q.name, 16) || 'Host'], ['EXPIRE', K(c), TTL], ['EXPIRE', K(c) + ':pl', TTL]]);
+      const ex = String(q.ex || '').replace(/[^A-Za-z0-9+_,-]/g, '').split(',').filter(Boolean).slice(-800).join(',');
+      await redis([['HSET', K(c), 'rounds', rounds, 'per', per, 'game', 1, 'round', 0, 'state', 'lobby', 'ex', ex], ['HSET', K(c) + ':pl', pid, clean(q.name, 16) || 'Host'], ['EXPIRE', K(c), TTL], ['EXPIRE', K(c) + ':pl', TTL]]);
       return res.json(await state(c));
     }
     const s = code && await state(code); if (!s) return res.status(404).json({ error: 'no room' });

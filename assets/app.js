@@ -797,35 +797,59 @@ function akthar(mode) {
    QUESTION FACTORY (party & challenge)
    ========================================================= */
 const PB = window.PARTY || { who: {}, quotes: [], books: [], places: [] };
+const GH_ = window.GHOUSS || [];
 const QT = { en: 'Who said it?', fr: 'Qui a dit ça ?', ar: 'من قال هذا؟' };
-function makeQ(r, seen = new Set()) {
-  const W = { quote: 4, book: 1, place: 2, placeg: 1, known: 2, born: 1, year: 1, hist: 1, close: 1, origin: 1, deleg: 1, sil: 1, nb: 1 };
-  const bag = Object.entries(W).flatMap(([k, n]) => Array(n).fill(k));
+const QW = { quote: 3, book: 2, place: 3, placeg: 1, known: 2, born: 1, older: 1, year: 1, hist: 1, close: 1, grow: 1, delpop: 1, deleg: 1, deleg2: 1, origin: 2, food: 1, pos: 1, holiday: 1, sil: 1, nb: 1 };
+const QBAG = Object.entries(QW).flatMap(([k, n]) => Array(n).fill(k));
+const dk = d => 'D' + String(d.id).replace(/\D/g, '');
+/* One question. `seen` = subjects already used in this party (never repeated); `soft` = subjects
+   this group played in earlier parties (avoided while the bank still has fresh ones). */
+function makeQ(r, seen = new Set(), soft = null) {
   const govOpts = (ans, excl = [ans], n = 4) => shuffle([ans, ...shuffle(GOVS.map(g => g.id).filter(id => !excl.includes(id)), r).slice(0, n - 1)], r).map(id => ({ id, label: nm(G[id]) }));
   const whoOpts = (w) => { const era = PB.who[w].era; const pool = Object.keys(PB.who).filter(k => k !== w && PB.who[k].era === era); return shuffle([w, ...shuffle(pool, r).slice(0, 3)], r).map(id => ({ id, label: L(PB.who[id]) })); };
   const pname = p => LANG === 'ar' ? p.ar : p.name;
-  const credit = p => `<p class="credit">📷 ${esc(p.by)} · ${esc(p.lic)} · Wikimedia Commons</p>`;
-  const img = p => `<div class="qimg"><img src="${p.img}" alt="" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('err')"></div>${credit(p)}`;
+  const ghn = x => (LANG === 'ar' && x.ar) || (LANG === 'en' && x.en) || x.fr;
+  const img = p => `<div class="qimg"><img src="${p.img}" alt="" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('err')"></div><p class="credit">📷 ${esc(p.by)} · ${esc(p.lic)} · Wikimedia Commons</p>`;
+  const Qq = s => `<p class="qq">${L(s)}</p>`;
+  const pct = x => (Math.round(x * 1000) / 10).toLocaleString(LANG === 'fr' ? 'fr-FR' : 'en-GB') + ' %';
   const make = ty => {
-    if (ty === 'quote' && PB.quotes.length) { const i = Math.floor(r() * PB.quotes.length), q = PB.quotes[i]; return { key: 'q' + i, html: `<p class="qq">${L(QT)}</p><blockquote class="quote">${esc(L(q))}</blockquote>`, opts: whoOpts(q.w), ans: q.w, why: LF(q, 'why') }; }
-    if (ty === 'book' && PB.books.length) { const i = Math.floor(r() * PB.books.length), b = PB.books[i]; return { key: 'b' + i, html: `<p class="qq">${L({ en: 'Who wrote it?', fr: 'Qui l\'a écrit ?', ar: 'من كتبه؟' })}</p><h3>📖 ${esc(L(b))}</h3>`, opts: whoOpts(b.w), ans: b.w }; }
-    if (ty === 'place' && PB.places.length) { const p = pick(PB.places, r); const o = shuffle([p, ...shuffle(PB.places.filter(x => x.id !== p.id), r).slice(0, 3)], r); return { key: 'pl' + p.id, img: p.img, html: `<p class="qq">${L({ en: 'What is this place?', fr: 'Quel est ce lieu ?', ar: 'ما هذا المكان؟' })}</p>${img(p)}`, opts: o.map(x => ({ id: x.id, label: L(x) })), ans: p.id }; }
-    if (ty === 'placeg') { const ps = PB.places.filter(x => x.g); if (!ps.length) return null; const p = pick(ps, r); return { key: 'pl' + p.id, img: p.img, html: `<p class="qq">${L({ en: 'In which governorate is this?', fr: 'Dans quel gouvernorat est-ce ?', ar: 'في أي ولاية يوجد هذا؟' })}</p>${img(p)}`, opts: govOpts(p.g), ans: p.g, why: L(p) }; }
-    if (ty === 'known') { const P = window.PEOPLE.filter(p => LF(p, 'k')); const p = pick(P, r); let pool = P.filter(x => x.id !== p.id && x.field === p.field); if (pool.length < 3) pool = P.filter(x => x.id !== p.id); const o = shuffle([p, ...shuffle(pool, r).slice(0, 3)], r); return { key: 'k' + p.id, html: `<p class="qq">${L({ en: 'Who is it?', fr: 'Qui est-ce ?', ar: 'من هو؟' })}</p><h3>${esc(LF(p, 'k'))}</h3>`, opts: o.map(x => ({ id: x.id, label: pname(x) })), ans: p.id }; }
-    if (ty === 'born') { const p = pick(window.PEOPLE.filter(p => G[p.g] && p.field !== 'history'), r); return { key: 'bo' + p.id, html: `<p class="qq">${L({ en: 'In which governorate was this person born?', fr: 'Dans quel gouvernorat est né(e)…', ar: 'في أي ولاية وُلد(ت)…' })}</p><h3>${esc(pname(p))}</h3><p class="qs">${esc(LF(p, 'k') || '')}</p>`, opts: govOpts(p.g), ans: p.g }; }
-    if (ty === 'year') { const ev = HIST.map((h, i) => i).filter(i => HIST[i].y > 0); const i = pick(ev, r), h = HIST[i], y = Math.floor(h.y); const ys = new Set([y]); while (ys.size < 4) { const d = (2 + Math.floor(r() * 40)) * (r() < .5 ? -1 : 1); if (y + d > 0 && y + d <= 2026) ys.add(y + d); } return { key: 'y' + i, html: `<p class="qq">${L({ en: 'In which year?', fr: 'En quelle année ?', ar: 'في أي سنة؟' })}</p><h3>${esc(h[LANG] || h.fr)}</h3>`, opts: [...ys].sort((a, b) => a - b).map(v => ({ id: 'y' + v, label: String(v) })), ans: 'y' + y, why: LF(h, 'd') }; }
-    if (ty === 'hist') { const ix = HIST.map((h, i) => i); for (let k = 0; k < 40; k++) { const [x, y] = shuffle(ix, r); const d = Math.abs(HIST[x].y - HIST[y].y); if (d >= 1 && d <= 250) { const tl = h => h[LANG] || h.fr; const first = HIST[x].y < HIST[y].y ? x : y; return { key: 'h' + Math.min(x, y) + '-' + Math.max(x, y), html: `<p class="qq">${L({ en: 'Which came first?', fr: 'Lequel est arrivé en premier ?', ar: 'أيهما حدث أوّلاً؟' })}</p>`, opts: [x, y].map(i => ({ id: 'h' + i, label: tl(HIST[i]) })), ans: 'h' + first, why: `${tl(HIST[x])}: ${yearTxt(HIST[x].y)} · ${tl(HIST[y])}: ${yearTxt(HIST[y].y)}` }; } } return null; }
-    if (ty === 'close') { const m = r() < .5 ? 'p24' : 'area'; for (let k = 0; k < 60; k++) { const [x, y] = shuffle(GOVS, r); const ratio = Math.max(x[m], y[m]) / Math.min(x[m], y[m]); if (ratio > 1.02 && ratio < 1.22) { const big = x[m] > y[m] ? x : y; const u = m === 'area' ? ' km²' : ''; return { key: 'c' + m + [x.id, y.id].sort(), html: `<p class="qq">${m === 'area' ? L({ en: 'Which one is bigger?', fr: 'Lequel est le plus grand ?', ar: 'أيهما أكبر مساحة؟' }) : L({ en: 'Which has more people (2024)? Close one!', fr: 'Lequel est le plus peuplé (2024) ? C\'est serré !', ar: 'أيهما أكثر سكاناً (2024)؟ الفرق صغير!' })}</p>`, opts: [x, y].map(g => ({ id: g.id, label: nm(g) })), ans: big.id, why: `${nm(x)}: ${fmt(x[m])}${u} · ${nm(y)}: ${fmt(y[m])}${u}` }; } } return null; }
-    if (ty === 'origin') { const o = pick(FACTS.origins, r); const a = o.g[0]; return { key: 'o' + (o.en || o.fr), html: `<p class="qq">${L({ en: 'Where is it from?', fr: 'D\'où ça vient ?', ar: 'من أين؟' })}</p><h3>${esc(o[LANG] || o.fr || o.en)}</h3><p class="qs">${esc(LF(o, 'sub'))}</p>`, opts: govOpts(a, o.g), ans: a, why: LF(o, 'why') }; }
-    if (ty === 'deleg') { const d = pick(DELS, r); return { key: 'd' + d.id, html: `<p class="qq">${L({ en: 'Which governorate is this delegation in?', fr: 'Dans quel gouvernorat est cette délégation ?', ar: 'في أي ولاية تقع هذه المعتمدية؟' })}</p><h3>${esc(nm(d))}</h3>`, opts: govOpts(d.g), ans: d.g }; }
-    if (ty === 'sil') { const g = pick(GOVS, r); return { key: 's' + g.id, html: `<p class="qq">${L({ en: 'Which governorate is this?', fr: 'Quel gouvernorat ?', ar: 'ما هذه الولاية؟' })}</p>${silhouette(g, 'sil small')}`, opts: govOpts(g.id), ans: g.id }; }
+    if (ty === 'quote') { const i = Math.floor(r() * PB.quotes.length), q = PB.quotes[i]; if (!q) return null; return { subj: ['q' + i], html: `${Qq(QT)}<blockquote class="quote">${esc(L(q))}</blockquote>`, opts: whoOpts(q.w), ans: q.w, why: LF(q, 'why') }; }
+    if (ty === 'book') { const i = Math.floor(r() * PB.books.length), b = PB.books[i]; if (!b) return null; return { subj: ['b' + i], html: `${Qq({ en: 'Who wrote it?', fr: 'Qui l\'a écrit ?', ar: 'من كتبه؟' })}<h3>📖 ${esc(L(b))}</h3>`, opts: whoOpts(b.w), ans: b.w }; }
+    if (ty === 'place') { const p = pick(PB.places, r); if (!p) return null; const o = shuffle([p, ...shuffle(PB.places.filter(x => x.id !== p.id), r).slice(0, 3)], r); return { subj: ['pl' + p.id], img: p.img, html: `${Qq({ en: 'What is this place?', fr: 'Quel est ce lieu ?', ar: 'ما هذا المكان؟' })}${img(p)}`, opts: o.map(x => ({ id: x.id, label: L(x) })), ans: p.id }; }
+    if (ty === 'placeg') { const p = pick(PB.places.filter(x => x.g), r); if (!p) return null; return { subj: ['pl' + p.id], img: p.img, html: `${Qq({ en: 'In which governorate is this?', fr: 'Dans quel gouvernorat est-ce ?', ar: 'في أي ولاية يوجد هذا؟' })}${img(p)}`, opts: govOpts(p.g), ans: p.g, why: L(p) }; }
+    if (ty === 'known') { const P = window.PEOPLE.filter(p => LF(p, 'k')); const p = pick(P, r); let pool = P.filter(x => x.id !== p.id && x.field === p.field); if (pool.length < 3) pool = P.filter(x => x.id !== p.id); const o = shuffle([p, ...shuffle(pool, r).slice(0, 3)], r); return { subj: ['P' + p.id], html: `${Qq({ en: 'Who is it?', fr: 'Qui est-ce ?', ar: 'من هو؟' })}<h3>${esc(LF(p, 'k'))}</h3>`, opts: o.map(x => ({ id: x.id, label: pname(x) })), ans: p.id }; }
+    if (ty === 'born') { const p = pick(window.PEOPLE.filter(p => G[p.g] && p.field !== 'history'), r); return { subj: ['P' + p.id], html: `${Qq({ en: 'In which governorate was this person born?', fr: 'Dans quel gouvernorat est né(e)…', ar: 'في أي ولاية وُلد(ت)…' })}<h3>${esc(pname(p))}</h3><p class="qs">${esc(LF(p, 'k') || '')}</p>`, opts: govOpts(p.g), ans: p.g }; }
+    if (ty === 'older') { const P = window.PEOPLE.filter(p => p.y > 1800); for (let k = 0; k < 30; k++) { const [a, b] = shuffle(P, r); const d = Math.abs(a.y - b.y); if (d >= 2 && d <= 15) { const o = a.y < b.y ? a : b; return { subj: ['P' + a.id, 'P' + b.id], html: Qq({ en: 'Who was born first?', fr: 'Qui est né en premier ?', ar: 'من وُلد أوّلاً؟' }), opts: [a, b].map(x => ({ id: x.id, label: pname(x) })), ans: o.id, why: `${pname(a)}: ${a.y} · ${pname(b)}: ${b.y}` }; } } return null; }
+    if (ty === 'year') { const ev = HIST.map((h, i) => i).filter(i => HIST[i].y > 0); const i = pick(ev, r), h = HIST[i], y = Math.floor(h.y); const ys = new Set([y]); while (ys.size < 4) { const d = (2 + Math.floor(r() * 40)) * (r() < .5 ? -1 : 1); if (y + d > 0 && y + d <= 2026) ys.add(y + d); } return { subj: ['E' + i], html: `${Qq({ en: 'In which year?', fr: 'En quelle année ?', ar: 'في أي سنة؟' })}<h3>${esc(h[LANG] || h.fr)}</h3>`, opts: [...ys].sort((a, b) => a - b).map(v => ({ id: 'y' + v, label: String(v) })), ans: 'y' + y, why: LF(h, 'd') }; }
+    if (ty === 'hist') { const ix = HIST.map((h, i) => i); for (let k = 0; k < 40; k++) { const [x, y] = shuffle(ix, r); const d = Math.abs(HIST[x].y - HIST[y].y); if (d >= 1 && d <= 250) { const tl = h => h[LANG] || h.fr; const first = HIST[x].y < HIST[y].y ? x : y; return { subj: ['E' + x, 'E' + y], html: Qq({ en: 'Which came first?', fr: 'Lequel est arrivé en premier ?', ar: 'أيهما حدث أوّلاً؟' }), opts: [x, y].map(i => ({ id: 'h' + i, label: tl(HIST[i]) })), ans: 'h' + first, why: `${tl(HIST[x])}: ${yearTxt(HIST[x].y)} · ${tl(HIST[y])}: ${yearTxt(HIST[y].y)}` }; } } return null; }
+    if (ty === 'close') { const m = r() < .5 ? 'p24' : 'area'; for (let k = 0; k < 60; k++) { const [x, y] = shuffle(GOVS, r); const ratio = Math.max(x[m], y[m]) / Math.min(x[m], y[m]); if (ratio > 1.02 && ratio < 1.22) { const big = x[m] > y[m] ? x : y; const u = m === 'area' ? ' km²' : ''; return { subj: ['C' + m + [x.id, y.id].sort().join('')], html: Qq(m === 'area' ? { en: 'Which one is bigger?', fr: 'Lequel est le plus grand ?', ar: 'أيهما أكبر مساحة؟' } : { en: 'Which has more people (2024)? Close one!', fr: 'Lequel est le plus peuplé (2024) ? C\'est serré !', ar: 'أيهما أكثر سكاناً (2024)؟ الفرق صغير!' }), opts: [x, y].map(g => ({ id: g.id, label: nm(g) })), ans: big.id, why: `${nm(x)}: ${fmt(x[m])}${u} · ${nm(y)}: ${fmt(y[m])}${u}` }; } } return null; }
+    if (ty === 'grow') { const gr = g => g.p24 / g.p14 - 1; for (let k = 0; k < 60; k++) { const [x, y] = shuffle(GOVS, r); const d = Math.abs(gr(x) - gr(y)); if (d > 0.004 && d < 0.04) { const big = gr(x) > gr(y) ? x : y; return { subj: ['G' + [x.id, y.id].sort().join('')], html: Qq({ en: 'Which one grew faster between 2014 and 2024?', fr: 'Lequel a le plus grandi entre 2014 et 2024 ?', ar: 'أيهما نما سكانه أكثر بين 2014 و2024؟' }), opts: [x, y].map(g => ({ id: g.id, label: nm(g) })), ans: big.id, why: `${nm(x)}: ${gr(x) >= 0 ? '+' : ''}${pct(gr(x))} · ${nm(y)}: ${gr(y) >= 0 ? '+' : ''}${pct(gr(y))}` }; } } return null; }
+    if (ty === 'delpop') { const g = pick(GOVS, r); const ds = DELS.filter(d => d.g === g.id && d.p24); for (let k = 0; k < 30; k++) { const [x, y] = shuffle(ds, r); if (!y) return null; const ratio = Math.max(x.p24, y.p24) / Math.min(x.p24, y.p24); if (ratio > 1.03 && ratio < 1.35) { const big = x.p24 > y.p24 ? x : y; return { subj: ['DP' + [dk(x), dk(y)].sort().join('')], html: `${Qq({ en: 'Which delegation has more people (2024)?', fr: 'Quelle délégation est la plus peuplée (2024) ?', ar: 'أي معتمدية أكثر سكاناً (2024)؟' })}<p class="qs">${esc(nm(g))}</p>`, opts: [x, y].map(d => ({ id: dk(d), label: nm(d) })), ans: dk(big), why: `${nm(x)}: ${fmt(x.p24)} · ${nm(y)}: ${fmt(y.p24)}` }; } } return null; }
+    if (ty === 'deleg') { const d = pick(DELS, r); return { subj: [dk(d)], html: `${Qq({ en: 'Which governorate is this delegation in?', fr: 'Dans quel gouvernorat est cette délégation ?', ar: 'في أي ولاية تقع هذه المعتمدية؟' })}<h3>${esc(nm(d))}</h3>`, opts: govOpts(d.g), ans: d.g }; }
+    if (ty === 'deleg2') { const g = pick(GOVS, r); const d = pick(DELS.filter(x => x.g === g.id), r); if (!d) return null; const near = DELS.filter(x => g.nb.includes(x.g)); const wrong = shuffle(near.length >= 3 ? near : DELS.filter(x => x.g !== g.id), r).slice(0, 3); return { subj: [dk(d)], html: `${Qq({ en: 'Which delegation is in the governorate of', fr: 'Quelle délégation se trouve dans le gouvernorat de', ar: 'أي معتمدية تقع في ولاية' })}<h3>${esc(nm(g))} ?</h3>`, opts: shuffle([d, ...wrong], r).map(x => ({ id: dk(x), label: nm(x) })), ans: dk(d), why: wrong.map(x => `${nm(x)}: ${nm(G[x.g])}`).join(' · ') }; }
+    if (ty === 'origin') { const i = Math.floor(r() * FACTS.origins.length), o = FACTS.origins[i]; const a = o.g[0]; return { subj: ['O' + i], html: `${Qq({ en: 'Where is it from?', fr: 'D\'où ça vient ?', ar: 'من أين؟' })}<h3>${esc(o[LANG] || o.fr || o.en)}</h3><p class="qs">${esc(LF(o, 'sub'))}</p>`, opts: govOpts(a, o.g), ans: a, why: LF(o, 'why') }; }
+    if (ty === 'food') { const T = { sweet: { en: 'Which one is a Tunisian sweet or pastry?', fr: 'Lequel est une pâtisserie ou un dessert tunisien ?', ar: 'أيّها حلويات تونسية؟' }, soup: { en: 'Which one is a soup or a stew?', fr: 'Lequel est une soupe ou un ragoût ?', ar: 'أيّها شربة أو مرق؟' }, street: { en: 'Which one is street food?', fr: 'Lequel se mange dans la rue (street food) ?', ar: 'أيّها أكلة شارع؟' }, drink: { en: 'Which one is a drink?', fr: 'Lequel est une boisson ?', ar: 'أيّها مشروب؟' } }; const tag = pick(Object.keys(T), r); const F = GH_.filter(x => x.cat === 'food'); const yes = F.filter(x => (x.tags || []).includes(tag)), no = F.filter(x => !(x.tags || []).includes(tag)); const a = pick(yes, r); if (!a || no.length < 3) return null; return { subj: ['F' + a.id], html: Qq(T[tag]), opts: shuffle([a, ...shuffle(no, r).slice(0, 3)], r).map(x => ({ id: x.id, label: ghn(x) })), ans: a.id }; }
+    if (ty === 'pos') { const T = { gk: { en: 'Which one was a goalkeeper for Tunisia?', fr: 'Lequel était gardien de but de la sélection ?', ar: 'من كان حارس مرمى للمنتخب؟' }, fw: { en: 'Which one was a striker for Tunisia?', fr: 'Lequel était attaquant de la sélection ?', ar: 'من كان مهاجماً في المنتخب؟' }, df: { en: 'Which one was a defender for Tunisia?', fr: 'Lequel était défenseur de la sélection ?', ar: 'من كان مدافعاً في المنتخب؟' }, mf: { en: 'Which one was a midfielder for Tunisia?', fr: 'Lequel était milieu de terrain de la sélection ?', ar: 'من كان لاعب وسط في المنتخب؟' } }; const tag = pick(Object.keys(T), r); const P = GH_.filter(x => x.cat === 'player'); const yes = P.filter(x => (x.tags || []).includes(tag)), no = P.filter(x => !(x.tags || []).includes(tag)); const a = pick(yes, r); if (!a) return null; return { subj: ['F' + a.id], html: Qq(T[tag]), opts: shuffle([a, ...shuffle(no, r).slice(0, 3)], r).map(x => ({ id: x.id, label: ghn(x) })), ans: a.id }; }
+    if (ty === 'holiday') { const E = GH_.filter(x => x.cat === 'event'); const fest = r() < .5; const yes = E.filter(x => (x.tags || []).includes(fest ? 'festival' : 'holiday')), no = E.filter(x => !(x.tags || []).includes(fest ? 'festival' : 'holiday')); const a = pick(yes, r); if (!a) return null; return { subj: ['F' + a.id], html: Qq(fest ? { en: 'Which one is a festival?', fr: 'Lequel est un festival ?', ar: 'أيّها مهرجان؟' } : { en: 'Which one is a public holiday in Tunisia?', fr: 'Lequel est un jour férié en Tunisie ?', ar: 'أيّها عطلة رسمية في تونس؟' }), opts: shuffle([a, ...shuffle(no, r).slice(0, 3)], r).map(x => ({ id: x.id, label: ghn(x) })), ans: a.id }; }
+    if (ty === 'sil') { const g = pick(GOVS, r); return { subj: ['S' + g.id], html: `${Qq({ en: 'Which governorate is this?', fr: 'Quel gouvernorat ?', ar: 'ما هذه الولاية؟' })}${silhouette(g, 'sil small')}`, opts: govOpts(g.id), ans: g.id }; }
     const g = pick(GOVS.filter(g => g.nb.length < 6), r); const a = pick(g.nb, r);
-    return { key: 'n' + g.id + a, html: `<p class="qq">${L({ en: 'Which one borders', fr: 'Lequel est voisin de', ar: 'أيّها يجاور' })}</p><h3>${esc(nm(g))}?</h3>`, opts: govOpts(a, [g.id, ...g.nb]), ans: a };
+    return { subj: ['N' + g.id + a], html: `${Qq({ en: 'Which one borders', fr: 'Lequel est voisin de', ar: 'أيّها يجاور' })}<h3>${esc(nm(g))}?</h3>`, opts: govOpts(a, [g.id, ...g.nb]), ans: a };
   };
-  for (let k = 0; k < 30; k++) { const q = make(pick(bag, r)); if (q && !seen.has(q.key)) { seen.add(q.key); return q; } }
-  return make('deleg');
+  const fresh = (q, s) => q && q.subj.every(k => !seen.has(k) && !(s && s.has(k)));
+  for (const s of [soft, null]) for (let k = 0; k < 60; k++) { const q = make(pick(QBAG, r)); if (fresh(q, s)) { q.subj.forEach(x => seen.add(x)); q.key = q.subj.join('+'); return q; } }
+  const q = make('deleg'); q.key = q.subj.join('+'); return q;
 }
-const makeQs = (r, n) => { const seen = new Set(); const Q = Array.from({ length: n }, () => makeQ(r, seen)); Q.forEach(q => { if (q.img) { const im = new Image(); im.referrerPolicy = 'no-referrer'; im.src = q.img; } }); return Q; };
+const preload = Q => Q.forEach(q => { if (q.img) { const im = new Image(); im.referrerPolicy = 'no-referrer'; im.src = q.img; } });
+const makeQs = (r, n, seen = new Set(), soft = null) => Array.from({ length: n }, () => makeQ(r, seen, soft));
+/* every player builds the same question list: replay the whole party so far with one shared `seen` */
+function roomQs(code, ex, game, round, rounds, per) {
+  const seen = new Set(), soft = new Set(ex || []);
+  let Q = [];
+  for (let g = 1; g <= game; g++) for (let r = 1; r <= (g < game ? rounds : round); r++) Q = makeQs(rng(`salle:${code}:${g}:${r}`), per, seen, soft);
+  return Q;
+}
+const PHIST = 'party:hist';
+const remember = Q => { const h = LS.get(PHIST, []); const s = new Set(h); Q.forEach(q => q.subj.forEach(k => { if (!s.has(k)) { s.add(k); h.push(k); } })); LS.set(PHIST, h.slice(-1200)); };
 function askQ(root, q, secs, cb) {
   root.innerHTML = `<div class="qbox">${q.html}<div class="timer"><i style="animation-duration:${secs}s"></i></div><div class="opts ${q.opts.length === 2 ? 'two' : ''}">${q.opts.map(o => `<button class="opt" data-id="${o.id}">${esc(o.label)}</button>`).join('')}</div><div class="qfb"></div></div>`;
   let over = false; const t0 = Date.now(); const to = setTimeout(() => fin(null), secs * 1000);
@@ -896,7 +920,7 @@ function party() {
   $('#o-create').onclick = async e => {
     const name = myName(); if (!name) return; const rounds = +$('#o-rounds').value, per = +$('#o-per').value; LS.set('party:set', { rounds, per });
     e.target.disabled = true;
-    try { roomApi.code = ''; const s = await roomApi({ op: 'create', name, rounds, per }); if (s && s.code) { location.hash = 'salle-' + s.code; return; } } catch (err) { }
+    try { roomApi.code = ''; const s = await roomApi({ op: 'create', name, rounds, per, ex: LS.get(PHIST, []).slice(-600).join(',') }); if (s && s.code) { location.hash = 'salle-' + s.code; return; } } catch (err) { }
     e.target.disabled = false; toast(pt('offline'), 'bad');
   };
   const join = () => { const c = $('#o-code').value.toUpperCase().replace(/[^A-Z]/g, ''); if (c.length < 4) return $('#o-code').focus(); if (!myName()) return; location.hash = 'salle-' + c; };
@@ -966,7 +990,7 @@ function salle(code) {
   }
   function startPlay() {
     const g = S_.game, r = S_.round, per = S_.per;
-    const Q = makeQs(rng(`salle:${code}:${g}:${r}`), per);
+    const Q = roomQs(code, S_.ex, g, r, S_.rounds, per); preload(Q);
     let pr = LS.get(progKey, null); if (!pr || pr.g !== g || pr.r !== r) pr = { g, r, i: 0, pts: 0, c: 0 };
     let cur = null, stopped = false, nextT = null;
     play = { stop: () => { stopped = true; clearTimeout(nextT); if (cur) cur.cancel(); } };
@@ -987,6 +1011,7 @@ function salle(code) {
     ask();
   }
   function results() {
+    if (S_.round) remember(roomQs(code, S_.ex, S_.game, S_.round, S_.rounds, S_.per));
     const T = totals(), rs = S_.scores[S_.round] || {}, last = S_.round >= S_.rounds;
     const rows = players().map(p => ({ ...p, t: T[p.pid] || 0, s: rs[p.pid] || { pts: 0, n: 0, c: 0 } })).sort((a, b) => b.t - a.t || b.s.c - a.s.c);
     const medal = i => ['🥇', '🥈', '🥉'][i] || (i + 1);
@@ -1006,7 +1031,7 @@ function salle(code) {
 }
 function runParty(body, names) {
   const P = names.map(n => ({ n, l: 3 })); let turn = 0;
-  const seen = new Set();
+  const seen = new Set(), soft = new Set(LS.get(PHIST, []));
   const alive = () => P.filter(p => p.l > 0);
   const board = () => `<div class="board">${P.map((p, i) => `<span class="pl ${p.l <= 0 ? 'out' : ''} ${i === turn ? 'cur' : ''}">${esc(p.n)} ${hearts(p.l, 3)}</span>`).join('')}</div>`;
   function pass() {
@@ -1017,7 +1042,8 @@ function runParty(body, names) {
   }
   function ask() {
     body.innerHTML = `${board()}<div class="qwrap"></div>`;
-    askQ($('.qwrap', body), makeQ(Math.random, seen), 15, ok => {
+    const q = makeQ(Math.random, seen, soft); remember([q]); preload([q]);
+    askQ($('.qwrap', body), q, 15, ok => {
       if (!ok) P[turn].l--;
       $('.qwrap', body).insertAdjacentHTML('beforeend', `<div class="actions"><button class="btn primary" id="pp-next">${t('next')}</button></div>`);
       $('.board', body).outerHTML = board();
@@ -1033,7 +1059,7 @@ function runParty(body, names) {
 }
 function defi(code) {
   code = String(code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6) || 'TUNS';
-  const Q = makeQs(rng('defi2:' + code), 10);
+  const Q = makeQs(rng('defi2:' + code), 10); preload(Q);
   const k = 'defi:' + code; const prev = LS.get(k, null);
   const body = shell('party', `${L({ en: 'Challenge', fr: 'Défi', ar: 'تحدٍّ' })} ${code}`, 'تحدّي', t('challengeTxt'), `<div class="tstat"></div><div class="qwrap"></div><div class="after"></div>`);
   const stat = $('.tstat', body), qw = $('.qwrap', body), after = $('.after', body);
@@ -1068,6 +1094,6 @@ function route() {
 }
 applyLang();
 window.addEventListener('hashchange', route);
-window.L3B_Q = { makeQ, rng };
+window.L3B_Q = { makeQ, rng, roomQs };
 route();
 })();
