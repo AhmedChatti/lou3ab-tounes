@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "Lou3ab Tounes · لعب تونس",
+  "short_name": "Lou3ab Tounes",
+  "description": "Daily games to discover Tunisia: governorates, personalities, history, heritage and football. Jeux quotidiens pour découvrir la Tunisie.",
+  "start_url": "/?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1d33",
+  "theme_color": "#0f1d33",
+  "lang": "fr",
+  "dir": "auto",
+  "categories": ["games", "education", "trivia"],
+  "icons": [
+    { "src": "/assets/app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/app/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
