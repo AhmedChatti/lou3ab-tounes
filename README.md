@@ -26,7 +26,6 @@ The daily games change at **midnight**. Each day brings:
 - a new **governorate** to guess, with a fun fact about it,
 - a new **Tunisian personality**,
 - a new **mystery** person or place,
-- new **questions** on food, festivals and football,
 - new **history** events, new **origin cards** and a new **higher-or-lower** theme.
 
 When you finish a daily game, a countdown shows when the next one arrives. You can also replay past days with the ‹ › arrows.
@@ -62,7 +61,7 @@ Hints unlock along the way: what they're known for (after 5 guesses), then their
 **A mystery person or place. Where does it come from?**
 You start with one clue. Tap a governorate on the map and confirm. Each wrong guess reveals the next clue and shows how far you were. You have 5 clues and 5 guesses; the last clue is a geographic hint.
 
-### 🤿 Ghouss · غوص *(daily)*
+### 🤿 Ghouss · غوص *(coming soon)*
 **Seven prompts about Tunisian food, festivals, holidays, footballers and clubs**, like *"A Tunisian soup or stew"*, *"A public holiday"* or *"A Tunisia national-team goalkeeper"*.
 Type an answer. The fewer players who give the same answer, the deeper you dive: everybody says couscous, very few say bkila. 🐚
 Spelling mistakes are fine: the game suggests *"Did you mean…?"*. An answer that doesn't fit the prompt costs nothing; just try another one.

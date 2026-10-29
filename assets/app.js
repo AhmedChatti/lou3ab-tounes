@@ -263,7 +263,7 @@ const GAMES = [
   { id: 'wilayadle', name: 'Wilayadle', ar: 'ولايدل', daily: true, d: { en: 'Guess the governorate: region, coast, borders, population, area… green, orange or red.', fr: 'Devine le gouvernorat : région, littoral, frontières, population, superficie… vert, orange ou rouge.', ar: 'خمّن الولاية: الإقليم، الساحل، الحدود، السكان، المساحة… أخضر أو برتقالي أو أحمر.' } },
   { id: 'persondle', name: 'Persondle', ar: 'شخصدل', daily: true, d: { en: 'Guess the Tunisian personality: field, birthplace, birth year… each column gets warmer.', fr: 'Devine la personnalité tunisienne : domaine, lieu et année de naissance… chaque colonne te guide.', ar: 'خمّن الشخصية التونسية: المجال، مكان وسنة الولادة… كل عمود يرشدك.' } },
   { id: 'chkoun', name: 'Chkoun?', ar: 'شكون؟', daily: true, d: { en: 'A mystery person or place. One clue to start, a new one after each wrong guess on the map.', fr: 'Une personne ou un lieu mystère. Un indice au départ, un nouveau après chaque erreur sur la carte.', ar: 'شخصية أو مكان غامض. تلميح واحد في البداية وآخر بعد كل خطأ على الخريطة.' } },
-  { id: 'ghouss', name: 'Ghouss', ar: 'غوص', daily: true, d: { en: 'Seven prompts on Tunisian food, festivals and football. The rarer your answer among players, the deeper you dive.', fr: 'Sept questions sur la cuisine, les fêtes et le foot tunisiens. Plus ta réponse est rare, plus tu plonges.', ar: 'سبعة أسئلة عن الأكل والأعياد وكرة القدم في تونس. كلما كانت إجابتك أندر، غصت أعمق.' } },
+  { id: 'ghouss', name: 'Ghouss', ar: 'غوص', daily: true, soon: true, d: { en: 'Seven prompts on Tunisian food, festivals and football. The rarer your answer among players, the deeper you dive.', fr: 'Sept questions sur la cuisine, les fêtes et le foot tunisiens. Plus ta réponse est rare, plus tu plonges.', ar: 'سبعة أسئلة عن الأكل والأعياد وكرة القدم في تونس. كلما كانت إجابتك أندر، غصت أعمق.' } },
   { id: 'tarikh', name: 'Tarikh', ar: 'تاريخ', daily: true, d: { en: 'Put Tunisian history in order, from Carthage to the Quartet, via Louis IX and the Hafsids.', fr: 'Remets l\'histoire de la Tunisie dans l\'ordre, de Carthage au Quartet, en passant par Saint Louis et les Hafsides.', ar: 'رتّب تاريخ تونس من قرطاج إلى الرباعي، مروراً بلويس التاسع والحفصيين.' } },
   { id: 'mnin', name: 'Mnin?', ar: 'منين؟', d: { en: 'Singers, clubs, dishes, monuments: tap where each one comes from.', fr: 'Chanteurs, clubs, plats, monuments : touche d\'où vient chacun.', ar: 'مطربون، نوادٍ، أطباق، معالم: اضغط على أصل كل واحد.' } },
   { id: 'blitz', name: 'Blitz', ar: 'بليتز', d: { en: 'Sixty seconds. Find as many governorates, or delegations, as you can.', fr: 'Soixante secondes. Trouve un max de gouvernorats ou de délégations.', ar: 'ستون ثانية. جد أكبر عدد من الولايات أو المعتمديات.' } },
@@ -296,7 +296,7 @@ function home() {
     </div>
     <div class="hero-m">${mapSVG({ level: 'gov' })}</div>
   </section>
-  <section class="grid">${GAMES.map(g => `<a class="tile" href="#${g.id}">${thumbs[g.id]}<div class="tile-b"><h2>${g.name} <span lang="ar">${g.ar}</span></h2><p>${L(g.d)}</p><div class="tile-f">${g.daily ? `<span class="chip daily">${t('daily')}</span>` : `<span class="chip">${t('endless')}</span>`}${nw(g.id)}${st(g.id)}</div></div></a>`).join('')}</section>${footer()}`;
+  <section class="grid">${GAMES.map(g => g.soon ? `<div class="tile soon" aria-disabled="true"><div class="soon-in" aria-hidden="true">${thumbs[g.id]}<div class="tile-b"><h2>${g.name} <span lang="ar">${g.ar}</span></h2><p>${L(g.d)}</p></div></div><span class="soon-b">${L({ en: 'Coming soon', fr: 'Bientôt disponible', ar: 'قريباً' })}</span></div>` : `<a class="tile" href="#${g.id}">${thumbs[g.id]}<div class="tile-b"><h2>${g.name} <span lang="ar">${g.ar}</span></h2><p>${L(g.d)}</p><div class="tile-f">${g.daily ? `<span class="chip daily">${t('daily')}</span>` : `<span class="chip">${t('endless')}</span>`}${nw(g.id)}${st(g.id)}</div></div></a>`).join('')}</section>${footer()}`;
   bindLang();
   // idle shimmer: random governorate lights up
   const m = $('.hero-m'); let last; clearInterval(window.__heroT);
@@ -1084,7 +1084,7 @@ function route() {
     case 'wilayadle': return wilayadle(+a || TODAY);
     case 'chkoun': return chkoun(+a || TODAY);
     case 'persondle': return persondle(+a || TODAY);
-    case 'ghouss': return ghouss(+a || TODAY);
+    case 'ghouss': history.replaceState(null, '', location.pathname + location.search); return home();
     case 'tarikh': return tarikh(a || TODAY);
     case 'mnin': return mnin(a);
     case 'blitz': return blitz(a);
