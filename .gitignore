@@ -1,2 +1,7 @@
 node_modules/
 .vercel/
+*.keystore
+*.aab
+*.apk
+signing-key-info.txt
+*Google Play package*.zip

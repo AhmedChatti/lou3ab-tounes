@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.ahmedchatti.lou3abtounes",
+        "sha256_cert_fingerprints": ["45:FA:92:A0:5D:0F:0B:DE:8B:56:D5:BC:9F:C2:7C:0E:6E:AB:73:AE:64:E0:31:0C:50:C2:0D:75:9B:89:50:85"]
+      }
+    }]
